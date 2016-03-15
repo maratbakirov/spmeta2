@@ -7,6 +7,8 @@ using SPMeta2.CSOM.ModelHosts;
 using SPMeta2.CSOM.Standard.ModelHandlers;
 using SPMeta2.Definitions;
 using SPMeta2.Definitions.Base;
+using SPMeta2.Regression.CSOM.Extensions;
+using SPMeta2.Regression.CSOM.Standard.Extensions;
 using SPMeta2.Regression.CSOM.Validation;
 using SPMeta2.Standard.Definitions;
 using SPMeta2.Standard.Enumerations;
@@ -26,6 +28,19 @@ namespace SPMeta2.Regression.CSOM.Standard.Validation
             var folder = folderModelHost.CurrentListFolder;
             var definition = model.WithAssertAndCast<PublishingPageLayoutDefinition>("model", value => value.RequireNotNull());
 
+            var stringCustomContentType = string.Empty;
+
+            if (!string.IsNullOrEmpty(definition.ContentTypeName)
+                || !string.IsNullOrEmpty(definition.ContentTypeId))
+            {
+                if (!string.IsNullOrEmpty(definition.ContentTypeName))
+                {
+                    stringCustomContentType = ContentTypeLookupService
+                                                    .LookupContentTypeByName(folderModelHost.CurrentList, definition.ContentTypeName)
+                                                    .Name;
+                }
+            }
+
             var spObject = FindPublishingPage(folderModelHost.CurrentList, folder, definition);
             var spFile = spObject.File;
 
@@ -33,6 +48,7 @@ namespace SPMeta2.Regression.CSOM.Standard.Validation
 
             context.Load(spObject);
             context.Load(spObject, o => o.DisplayName);
+            context.Load(spObject, o => o.ContentType);
 
             context.Load(spFile, f => f.ServerRelativeUrl);
 
@@ -126,34 +142,112 @@ namespace SPMeta2.Regression.CSOM.Standard.Validation
                 };
             });
 
+
+            if (!string.IsNullOrEmpty(definition.ContentTypeId))
+            {
+                // TODO
+            }
+            else
+            {
+                assert.SkipProperty(m => m.ContentTypeId, "ContentTypeId is null or empty. Skipping.");
+            }
+
+            if (!string.IsNullOrEmpty(definition.ContentTypeName))
+            {
+                assert.ShouldBeEqual((p, s, d) =>
+                {
+                    var srcProp = s.GetExpressionValue(def => def.ContentTypeName);
+                    var currentContentTypeName = d.ContentType.Name;
+
+                    var isValis = stringCustomContentType == currentContentTypeName;
+
+                    return new PropertyValidationResult
+                    {
+                        Tag = p.Tag,
+                        Src = srcProp,
+                        Dst = null,
+                        IsValid = isValis
+                    };
+                });
+            }
+            else
+            {
+                assert.SkipProperty(m => m.ContentTypeName, "ContentTypeName is null or empty. Skipping.");
+            }
+
+            if (definition.DefaultValues.Count > 0)
+            {
+                assert.ShouldBeEqual((p, s, d) =>
+                {
+                    var isValid = true;
+
+                    foreach (var srcValue in s.DefaultValues)
+                    {
+                        // big TODO here for == != 
+
+                        if (!string.IsNullOrEmpty(srcValue.FieldName))
+                        {
+                            if (d[srcValue.FieldName].ToString() != srcValue.Value.ToString())
+                                isValid = false;
+                        }
+
+                        if (!isValid)
+                            break;
+                    }
+
+                    var srcProp = s.GetExpressionValue(def => def.DefaultValues);
+
+                    return new PropertyValidationResult
+                    {
+                        Tag = p.Tag,
+                        Src = srcProp,
+                        Dst = null,
+                        IsValid = isValid
+                    };
+                });
+            }
+            else
+            {
+                assert.SkipProperty(m => m.DefaultValues, "DefaultValues.Count == 0. Skipping.");
+            }
+
+            if (definition.Values.Count > 0)
+            {
+                assert.ShouldBeEqual((p, s, d) =>
+                {
+                    var isValid = true;
+
+                    foreach (var srcValue in s.Values)
+                    {
+                        // big TODO here for == != 
+
+                        if (!string.IsNullOrEmpty(srcValue.FieldName))
+                        {
+                            if (d[srcValue.FieldName].ToString() != srcValue.Value.ToString())
+                                isValid = false;
+                        }
+
+                        if (!isValid)
+                            break;
+                    }
+
+                    var srcProp = s.GetExpressionValue(def => def.Values);
+
+                    return new PropertyValidationResult
+                    {
+                        Tag = p.Tag,
+                        Src = srcProp,
+                        Dst = null,
+                        IsValid = isValid
+                    };
+                });
+            }
+            else
+            {
+                assert.SkipProperty(m => m.Values, "Values.Count == 0. Skipping.");
+            }
         }
 
         #endregion
-    }
-
-
-
-    internal static class PublishingPageLayoutItemHelper
-    {
-        public static string GetPublishingPageLayoutDescription(this ListItem item)
-        {
-            return item["MasterPageDescription"] as string;
-        }
-
-        public static string GetPublishingPageLayoutAssociatedContentTypeId(this ListItem item)
-        {
-            var value = item["PublishingAssociatedContentType"].ToString();
-            var values = value.Split(new string[] { ";#" }, StringSplitOptions.None);
-
-            return values[2];
-        }
-
-        public static string GetPublishingPageLayoutAssociatedContentTypeName(this ListItem item)
-        {
-            var value = item["PublishingAssociatedContentType"].ToString();
-            var values = value.Split(new string[] { ";#" }, StringSplitOptions.None);
-
-            return values[1];
-        }
     }
 }

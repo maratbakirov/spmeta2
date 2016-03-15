@@ -1,17 +1,15 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Xml.Linq;
+
 using Microsoft.SharePoint;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+
 using SPMeta2.Containers.Assertion;
 using SPMeta2.Definitions;
-using SPMeta2.Definitions.Base;
-
+using SPMeta2.Regression.SSOM.Extensions;
 using SPMeta2.SSOM.Extensions;
 using SPMeta2.SSOM.ModelHandlers;
 using SPMeta2.Utils;
 using SPMeta2.SSOM.ModelHosts;
-
 
 namespace SPMeta2.Regression.SSOM.Validation
 {
@@ -32,6 +30,38 @@ namespace SPMeta2.Regression.SSOM.Validation
                                .ShouldBeEqual(m => m.Hidden, o => o.Hidden)
                                .ShouldBeEqual(m => m.RowLimit, o => (int)o.RowLimit)
                                .ShouldBeEqual(m => m.IsPaged, o => o.Paged);
+
+
+            if (definition.InlineEdit.HasValue)
+                assert.ShouldBeEqual(m => m.InlineEdit.ToString().ToLower(), o => o.InlineEdit.ToLower());
+            else
+                assert.SkipProperty(m => m.InlineEdit);
+
+
+            if (!string.IsNullOrEmpty(definition.Scope))
+            {
+                assert.ShouldBeEqual((p, s, d) =>
+                {
+                    var srcProp = s.GetExpressionValue(def => def.Scope);
+                    var dstProp = d.GetExpressionValue(o => o.Scope);
+
+                    var scopeValue = ListViewScopeTypesConvertService.NormilizeValueToSSOMType(definition.Scope);
+
+                    var isValid = scopeValue == d.Scope.ToString();
+
+                    return new PropertyValidationResult
+                    {
+                        Tag = p.Tag,
+                        Src = srcProp,
+                        Dst = dstProp,
+                        IsValid = isValid
+                    };
+                });
+            }
+            else
+            {
+                assert.SkipProperty(m => m.Scope);
+            }
 
             if (!string.IsNullOrEmpty(definition.Query))
             {
@@ -145,6 +175,11 @@ namespace SPMeta2.Regression.SSOM.Validation
             else
                 assert.SkipProperty(m => m.DefaultViewForContentType, "DefaultViewForContentType is null or empty. Skipping.");
 
+            if (definition.TabularView.HasValue)
+                assert.ShouldBeEqual(m => m.TabularView, o => o.TabularView);
+            else
+                assert.SkipProperty(m => m.TabularView, "TabularView is null or empty. Skipping.");
+
             if (string.IsNullOrEmpty(definition.ContentTypeName))
                 assert.SkipProperty(m => m.ContentTypeName, "ContentTypeName is null or empty. Skipping.");
             else
@@ -190,6 +225,16 @@ namespace SPMeta2.Regression.SSOM.Validation
                     };
                 });
             }
+
+            if (string.IsNullOrEmpty(definition.AggregationsStatus))
+                assert.SkipProperty(m => m.AggregationsStatus, "Aggregationsstatus is null or empty. Skipping.");
+            else
+                assert.ShouldBeEqual(m => m.AggregationsStatus, o => o.AggregationsStatus);
+
+            if (string.IsNullOrEmpty(definition.Aggregations))
+                assert.SkipProperty(m => m.Aggregations, "Aggregations is null or empty. Skipping.");
+            else
+                assert.ShouldBeEqual(m => m.Aggregations, o => o.Aggregations);
 
             if (string.IsNullOrEmpty(definition.Url))
                 assert.SkipProperty(m => m.Url, "Url is null or empty. Skipping.");
@@ -261,21 +306,4 @@ namespace SPMeta2.Regression.SSOM.Validation
         }
     }
 
-    internal static class ViewDefault
-    {
-        public static string GetType(this ListViewDefinition def)
-        {
-            return def.Type.ToUpper();
-        }
-
-        public static string GetType(this SPView view)
-        {
-            return view.Type.ToUpper();
-        }
-
-        public static bool IsDefaul(this SPView view)
-        {
-            return view.ParentList.DefaultView.ID == view.ID;
-        }
-    }
 }

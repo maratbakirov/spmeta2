@@ -33,8 +33,11 @@ namespace SPMeta2
             RegisterService(typeof(DefaultXMLSerializationService), new DefaultXMLSerializationService());
 
             RegisterService(typeof(WebPartChromeTypesConvertService), new DefaultWebPartChromeTypesConvertService());
+            RegisterService(typeof(ListViewScopeTypesConvertService), new DefaultListViewScopeTypesConvertService());
 
             RegisterService(typeof(DefinitionRelationshipServiceBase), new DefaultDefinitionRelationshipService());
+
+            RegisterService(typeof(ModelCompatibilityServiceBase), new DefaultModelCompatibilityService());
         }
 
         #endregion

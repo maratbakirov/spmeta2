@@ -21,6 +21,7 @@ using SPMeta2.Standard.Definitions;
 using SPMeta2.Regression.Tests.Config;
 using SPMeta2.Services;
 using SPMeta2.Containers.Utils;
+using SPMeta2.Standard.Definitions.Webparts;
 
 namespace SPMeta2.Regression.Tests.Impl.Definitions
 {
@@ -439,6 +440,8 @@ namespace SPMeta2.Regression.Tests.Impl.Definitions
                         addArrayDefinitionMethodName = string.Format("{0}es", definitionName);
                     if (definitionType == typeof(PropertyDefinition))
                         addArrayDefinitionMethodName = string.Format("AddProperties");
+                    if (definitionType == typeof(SiteDocumentsDefinition))
+                        addArrayDefinitionMethodName = string.Format("AddSiteDocuments");
                     if (definitionType == typeof(ManagedPropertyDefinition))
                         addArrayDefinitionMethodName = string.Format("AddManagedProperties");
                     if (definitionType == typeof(DiagnosticsServiceBaseDefinition))
@@ -530,7 +533,7 @@ namespace SPMeta2.Regression.Tests.Impl.Definitions
         [TestCategory("Regression.Definitions.Syntax.v11")]
         public void DefinitionsShouldHaveWithXXX_DefinitionSyntax_v11()
         {
-            if (M2RegressionRuntime.CurrentAPIVersion < M2Consts.APIv12)
+            if (!M2RegressionRuntime.IsV11)
                 return;
 
             var showSkipping = false;
@@ -544,7 +547,7 @@ namespace SPMeta2.Regression.Tests.Impl.Definitions
 
             var hasAllAddMethods = true;
 
-            foreach (var definitionType in AllDefinitionTypes)
+            foreach (var definitionType in AllDefinitionTypes.OrderBy(d => d.Name))
             {
                 var definitionName = definitionType.Name.Replace("Definition", string.Empty);
 
@@ -803,6 +806,12 @@ namespace SPMeta2.Regression.Tests.Impl.Definitions
                                     addXXXArrayDefinitionMethodName += "es";
                                 } break;
                         }
+
+                        if (defType == typeof(SiteDocumentsDefinition))
+                            addXXXArrayDefinitionMethodName = string.Format("AddSiteDocuments");
+
+                        if (defType == typeof(MetadataNavigationSettingsDefinition))
+                            addXXXArrayDefinitionMethodName = string.Format("AddMetadataNavigationSettings");
 
                         // host
 

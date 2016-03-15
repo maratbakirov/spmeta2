@@ -1,21 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SPMeta2.BuiltInDefinitions;
 using SPMeta2.Containers;
+using SPMeta2.Containers.Extensions;
 using SPMeta2.Containers.Standard;
 using SPMeta2.CSOM.DefaultSyntax;
 using SPMeta2.Definitions;
 using SPMeta2.Definitions.Webparts;
 using SPMeta2.Enumerations;
+using SPMeta2.Regression.Definitions.Extended;
 using SPMeta2.Regression.Tests.Base;
 using SPMeta2.Standard.Definitions;
 using SPMeta2.Standard.Enumerations;
 using SPMeta2.Syntax.Default;
 using SPMeta2.Syntax.Default.Modern;
+using SPMeta2.Definitions.Base;
 
 namespace SPMeta2.Regression.Tests.Impl.Scenarios
 {
@@ -116,40 +120,43 @@ namespace SPMeta2.Regression.Tests.Impl.Scenarios
         [TestCategory("Regression.Scenarios.Webparts.ListViewWebPart")]
         public void CanDeploy_ListViewWebPart_ByListId()
         {
-            var sourceList = ModelGeneratorService.GetRandomDefinition<ListDefinition>(def => { });
-            var listViewWebpart = ModelGeneratorService.GetRandomDefinition<ListViewWebPartDefinition>(def =>
+            WithDisabledDefinitionImmutabilityValidation(() =>
             {
-                def.ListId = Guid.Empty;
-                def.ListTitle = string.Empty;
-                def.ListUrl = string.Empty;
-
-                def.ViewName = string.Empty;
-                def.ViewId = null;
-            });
-
-            var model = SPMeta2Model
-                .NewWebModel(web =>
+                var sourceList = ModelGeneratorService.GetRandomDefinition<ListDefinition>(def => { });
+                var listViewWebpart = ModelGeneratorService.GetRandomDefinition<ListViewWebPartDefinition>(def =>
                 {
-                    web
-                        .AddList(sourceList, list =>
-                        {
-                            list.OnProvisioned<object>(context =>
-                            {
-                                listViewWebpart.ListId = ExtractListId(context);
-                            });
-                        })
-                        .AddHostList(BuiltInListDefinitions.SitePages, list =>
-                        {
-                            list
-                                .AddRandomWebPartPage(page =>
-                                {
-                                    page.AddListViewWebPart(listViewWebpart);
-                                });
-                        });
+                    def.ListId = Guid.Empty;
+                    def.ListTitle = string.Empty;
+                    def.ListUrl = string.Empty;
 
+                    def.ViewName = string.Empty;
+                    def.ViewId = null;
                 });
 
-            TestModel(model);
+                var model = SPMeta2Model
+                    .NewWebModel(web =>
+                    {
+                        web
+                            .AddList(sourceList, list =>
+                            {
+                                list.OnProvisioned<object>(context =>
+                                {
+                                    listViewWebpart.ListId = ExtractListId(context);
+                                });
+                            })
+                            .AddHostList(BuiltInListDefinitions.SitePages, list =>
+                            {
+                                list
+                                    .AddRandomWebPartPage(page =>
+                                    {
+                                        page.AddListViewWebPart(listViewWebpart);
+                                    });
+                            });
+
+                    });
+
+                TestModel(model);
+            });
         }
 
         #endregion
@@ -160,57 +167,61 @@ namespace SPMeta2.Regression.Tests.Impl.Scenarios
         [TestCategory("Regression.Scenarios.Webparts.ListViewWebPart")]
         public void CanDeploy_ListViewWebPart_ByViewId()
         {
-            var sourceList = ModelGeneratorService.GetRandomDefinition<ListDefinition>(def => { });
-            var sourceView = ModelGeneratorService.GetRandomDefinition<ListViewDefinition>(def =>
+            WithDisabledDefinitionImmutabilityValidation(() =>
             {
-                def.Fields = new System.Collections.ObjectModel.Collection<string>
+
+                var sourceList = ModelGeneratorService.GetRandomDefinition<ListDefinition>(def => { });
+                var sourceView = ModelGeneratorService.GetRandomDefinition<ListViewDefinition>(def =>
+                {
+                    def.Fields = new System.Collections.ObjectModel.Collection<string>
                 {
                     BuiltInInternalFieldNames.ID,
                     BuiltInInternalFieldNames.Edit,
                     BuiltInInternalFieldNames.Title                    
                 };
 
-                def.IsDefault = false;
-            });
-
-            var listViewWebpart = ModelGeneratorService.GetRandomDefinition<ListViewWebPartDefinition>(def =>
-            {
-                def.ListId = Guid.Empty;
-                def.ListTitle = string.Empty;
-#pragma warning disable 618
-                def.ListUrl = sourceList.GetListUrl();
-#pragma warning restore 618
-
-                def.ViewName = string.Empty;
-                def.ViewId = null;
-            });
-
-            var model = SPMeta2Model
-                .NewWebModel(web =>
-                {
-                    web
-                        .AddList(sourceList, list =>
-                        {
-                            list.AddListView(sourceView, view =>
-                            {
-                                view.OnProvisioned<object>(context =>
-                                {
-                                    listViewWebpart.ViewId = ExtractViewId(context);
-                                });
-                            });
-                        })
-                        .AddHostList(BuiltInListDefinitions.SitePages, list =>
-                        {
-                            list
-                                .AddRandomWebPartPage(page =>
-                                {
-                                    page.AddListViewWebPart(listViewWebpart);
-                                });
-                        });
-
+                    def.IsDefault = false;
                 });
 
-            TestModel(model);
+                var listViewWebpart = ModelGeneratorService.GetRandomDefinition<ListViewWebPartDefinition>(def =>
+                {
+                    def.ListId = Guid.Empty;
+                    def.ListTitle = string.Empty;
+#pragma warning disable 618
+                    def.ListUrl = sourceList.GetListUrl();
+#pragma warning restore 618
+
+                    def.ViewName = string.Empty;
+                    def.ViewId = null;
+                });
+
+                var model = SPMeta2Model
+                    .NewWebModel(web =>
+                    {
+                        web
+                            .AddList(sourceList, list =>
+                            {
+                                list.AddListView(sourceView, view =>
+                                {
+                                    view.OnProvisioned<object>(context =>
+                                    {
+                                        listViewWebpart.ViewId = ExtractViewId(context);
+                                    });
+                                });
+                            })
+                            .AddHostList(BuiltInListDefinitions.SitePages, list =>
+                            {
+                                list
+                                    .AddRandomWebPartPage(page =>
+                                    {
+                                        page.AddListViewWebPart(listViewWebpart);
+                                    });
+                            });
+
+                    });
+
+                TestModel(model);
+            });
         }
 
         [TestMethod]
@@ -385,7 +396,77 @@ namespace SPMeta2.Regression.Tests.Impl.Scenarios
             TestModel(model);
         }
 
-        #endregion
+        [TestMethod]
+        [TestCategory("Regression.Scenarios.Webparts.ListViewWebPart.Calendar")]
+        public void CanDeploy_XsltListViewWebPart_As_GridView()
+        {
+            // CSOM issue to get GridView on the XsltLIstViewWebPart done #725
+            // https://github.com/SubPointSolutions/spmeta2/issues/725
 
+            var sourceList = ModelGeneratorService.GetRandomDefinition<ListDefinition>(def =>
+            {
+                def.TemplateType = BuiltInListTemplateTypeId.GenericList;
+            });
+
+            var sourceListView = ModelGeneratorService.GetRandomDefinition<ListViewDefinition>(def =>
+            {
+                def.Title = Rnd.String();
+                def.Type = BuiltInViewType.Grid;
+
+                def.IsDefault = false;
+                
+                def.TabularView = null;
+
+                def.Fields = new Collection<string>
+                    {
+                        BuiltInInternalFieldNames.ID,
+                        BuiltInInternalFieldNames.Title
+                    };
+            });
+
+            var listViewWebpart = ModelGeneratorService.GetRandomDefinition<XsltListViewWebPartDefinition>(def =>
+            {
+                def.ListId = Guid.Empty;
+                def.ListTitle = sourceList.Title;
+                def.ListUrl = string.Empty;
+
+                def.ViewName = sourceListView.Title;
+                def.ViewId = null;
+            });
+
+            var model = SPMeta2Model.NewWebModel(web =>
+            {
+                web
+                    .AddList(sourceList, list =>
+                    {
+                        list.AddListView(sourceListView);
+                    })
+                    .AddHostList(BuiltInListDefinitions.SitePages, list =>
+                    {
+                        var pageName = string.Empty;
+
+                        list.AddRandomWebPartPage(page =>
+                        {
+                            pageName = (page.Value as WebPartPageDefinition).FileName;
+
+                            page.AddXsltListViewWebPart(listViewWebpart);
+
+                        });
+
+                        list.AddDefinitionNode(new XsltListViewWebPartGridModePresenceDefinition
+                        {
+                            PageFileName = pageName,
+                            WebPartDefinitions = new List<WebPartDefinitionBase>(new[] { listViewWebpart })
+                        }, def =>
+                        {
+                            def.RegExcludeFromEventsValidation();
+                        });
+                    });
+            });
+
+            TestModel(model);
+        }
+
+        #endregion
     }
 }

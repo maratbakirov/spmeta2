@@ -40,6 +40,7 @@ namespace SPMeta2.CSOM.ModelHandlers
 
         #region properties
 
+        protected bool ShouldUseWebPartStoreKeyForWikiPage { get; set; }
         protected WebPartChromeTypesConvertService WebPartChromeTypesConvertService { get; set; }
 
         public override Type TargetType
@@ -159,6 +160,14 @@ namespace SPMeta2.CSOM.ModelHandlers
 
             if (!string.IsNullOrEmpty(webPartModel.WebpartFileName))
             {
+#if NET35
+                // webPartFile.OpenBinaryStream should be re-implemented for SP2010
+
+            throw new SPMeta2NotImplementedException("Not implemented for SP2010 - https://github.com/SubPointSolutions/spmeta2/issues/769");
+#endif
+
+#if !NET35
+
                 lock (_wpCacheLock)
                 {
                     var wpKey = webPartModel.WebpartFileName.ToLower();
@@ -220,6 +229,8 @@ namespace SPMeta2.CSOM.ModelHandlers
                             _wpCache[wpKey] = result;
                     }
                 }
+
+#endif
             }
 
             if (!string.IsNullOrEmpty(webPartModel.WebpartType))
@@ -332,6 +343,11 @@ namespace SPMeta2.CSOM.ModelHandlers
 
         }
 
+        protected virtual void OnAfterDeploy(ListItemModelHost host, WebPartDefinitionBase webpart)
+        {
+
+        }
+
         public override void DeployModel(object modelHost, DefinitionBase model)
         {
             Guid? OldWebParKey = null;
@@ -339,191 +355,218 @@ namespace SPMeta2.CSOM.ModelHandlers
             var listItemModelHost = modelHost.WithAssertAndCast<ListItemModelHost>("modelHost", value => value.RequireNotNull());
             var webPartModel = model.WithAssertAndCast<WebPartDefinitionBase>("model", value => value.RequireNotNull());
 
-            OnBeforeDeploy(listItemModelHost, webPartModel);
-
-            CurrentClientContext = listItemModelHost.HostClientContext;
-
-            var context = listItemModelHost.HostClientContext;
-            var currentPageFile = GetCurrentPageFile(listItemModelHost);
-
-
-            if (listItemModelHost.HostFolder != null)
+            try
             {
-                if (!listItemModelHost.HostFolder.IsPropertyAvailable("Properties") ||
-                    listItemModelHost.HostFolder.Properties.FieldValues.Count == 0)
-                {
-                    listItemModelHost.HostFolder.Context.Load(listItemModelHost.HostFolder, f => f.Properties);
-                    //folder.Context.Load(folder, f => f.Properties);
+                OnBeforeDeploy(listItemModelHost, webPartModel);
 
-                    listItemModelHost.HostFolder.Context.ExecuteQueryWithTrace();
+                CurrentClientContext = listItemModelHost.HostClientContext;
+
+                var context = listItemModelHost.HostClientContext;
+                var currentPageFile = GetCurrentPageFile(listItemModelHost);
+
+
+                if (listItemModelHost.HostFolder != null)
+                {
+                    // TODO, re-implement for SP2010 CSOM
+                    // the following stuff is needed only for the web part deployment to the non-web part pages
+                    // like, view/upload/details pages in the lost/libs
+                    // hope no one would use that case on 2010 - folks, migrate to 2013 at least! :)
+#if !NET35
+
+                    if (!listItemModelHost.HostFolder.IsPropertyAvailable("Properties") ||
+                        listItemModelHost.HostFolder.Properties.FieldValues.Count == 0)
+                    {
+                        listItemModelHost.HostFolder.Context.Load(listItemModelHost.HostFolder, f => f.Properties);
+                        //folder.Context.Load(folder, f => f.Properties);
+
+                        listItemModelHost.HostFolder.Context.ExecuteQueryWithTrace();
+                    }
+
+#endif
                 }
+
+#if !NET35
+                var doesFileHasListItem =
+                    //Forms folders
+                    !(listItemModelHost.HostFolder != null
+                      &&
+                      (listItemModelHost.HostFolder.Properties.FieldValues.ContainsKey("vti_winfileattribs")
+                       &&
+                       listItemModelHost.HostFolder.Properties.FieldValues["vti_winfileattribs"].ToString() ==
+                       "00000012"));
+
+#endif
+
+#if NET35
+                // TODO, re-implement for SP2010 CSOM
+                // the following stuff is needed only for the web part deployment to the non-web part pages
+
+                var doesFileHasListItem = true;
+#endif
+
+
+                ModuleFileModelHandler.WithSafeFileOperation(listItemModelHost.HostList,
+                    currentPageFile, pageFile =>
+                    {
+                        Guid? webPartStoreKey = null;
+
+                        InternalOnBeforeWebPartProvision(new WebPartProcessingContext
+                        {
+                            ListItemModelHost = listItemModelHost,
+                            WebPartDefinition = webPartModel,
+                            WebPartStoreKey = webPartStoreKey
+                        });
+
+                        //var fileContext = pageFile.Context;
+                        ListItem fileListItem = null;
+
+                        if (webPartModel.AddToPageContent)
+                        {
+                            // pre load here to be used later
+
+                            var fileContext = pageFile.Context;
+
+                            fileListItem = pageFile.ListItemAllFields;
+
+                            fileContext.Load(fileListItem);
+                            fileContext.ExecuteQueryWithTrace();
+                        }
+
+                        var webPartManager = pageFile.GetLimitedWebPartManager(PersonalizationScope.Shared);
+
+                        // web part on the page
+                        var webpartOnPage = webPartManager.WebParts.Include(wp => wp.Id, wp => wp.WebPart);
+                        var webPartDefenitions = context.LoadQuery(webpartOnPage);
+
+                        context.ExecuteQueryWithTrace();
+
+                        Microsoft.SharePoint.Client.WebParts.WebPartDefinition wpDefinition;
+
+                        WebPart existingWebPart = null;
+
+                        // TODO
+                        var tmpWp = FindExistingWebPart(webPartDefenitions, webPartModel, out wpDefinition);
+
+                        InvokeOnModelEvent(this, new ModelEventArgs
+                        {
+                            CurrentModelNode = null,
+                            Model = null,
+                            EventType = ModelEventType.OnProvisioning,
+                            Object = existingWebPart,
+                            ObjectType = typeof(WebPart),
+                            ObjectDefinition = webPartModel,
+                            ModelHost = modelHost
+                        });
+
+                        if (wpDefinition != null)
+                        {
+                            OldWebParKey = wpDefinition.Id;
+
+                            TraceService.Information((int)LogEventId.ModelProvisionProcessingNewObject,
+                                "Deleting current web part.");
+
+                            wpDefinition.DeleteWebPart();
+                            wpDefinition.Context.ExecuteQueryWithTrace();
+                        }
+                        else
+                        {
+                            existingWebPart = tmpWp;
+                        }
+
+                        Microsoft.SharePoint.Client.WebParts.WebPartDefinition webPartAddedDefinition = null;
+
+                        if (existingWebPart == null)
+                        {
+                            TraceService.Information((int)LogEventId.ModelProvisionProcessingNewObject,
+                                "Processing new web part");
+
+                            var webPartXML = GetWebpartXmlDefinition(listItemModelHost, webPartModel);
+                            webPartXML = ProcessCommonWebpartProperties(webPartXML, webPartModel);
+
+                            //// handle wiki page
+                            //if (webPartModel.AddToPageContent)
+                            //{
+
+                            //    HandleWikiPageProvision(fileListItem, webPartModel);
+                            //}
+
+                            var webPartDefinition = webPartManager.ImportWebPart(webPartXML);
+                            webPartAddedDefinition = webPartManager.AddWebPart(webPartDefinition.WebPart,
+                                webPartModel.ZoneId,
+                                webPartModel.ZoneIndex);
+
+                            context.Load(webPartAddedDefinition);
+                            context.ExecuteQueryWithTrace();
+
+                            if (webPartAddedDefinition != null && webPartAddedDefinition.ServerObjectIsNull == false)
+                            {
+                                existingWebPart = webPartAddedDefinition.WebPart;
+                                webPartStoreKey = webPartAddedDefinition.Id;
+                            }
+
+                            // handle wiki page
+                            if (webPartModel.AddToPageContent)
+                            {
+                                HandleWikiPageProvision(fileListItem, webPartModel, webPartStoreKey, OldWebParKey);
+                            }
+
+                            existingWebPart = webPartDefinition.WebPart;
+
+                            InvokeOnModelEvent(this, new ModelEventArgs
+                            {
+                                CurrentModelNode = null,
+                                Model = null,
+                                EventType = ModelEventType.OnProvisioned,
+                                Object = existingWebPart,
+                                ObjectType = typeof(WebPart),
+                                ObjectDefinition = webPartModel,
+                                ModelHost = modelHost
+                            });
+                        }
+                        else
+                        {
+                            TraceService.Information((int)LogEventId.ModelProvisionProcessingExistingObject,
+                                "Processing existing web part");
+
+                            if (webPartModel.AddToPageContent)
+                            {
+                                //HandleWikiPageProvision(fileListItem, webPartModel);
+                            }
+
+                            InvokeOnModelEvent(this, new ModelEventArgs
+                            {
+                                CurrentModelNode = null,
+                                Model = null,
+                                EventType = ModelEventType.OnProvisioned,
+                                Object = existingWebPart,
+                                ObjectType = typeof(WebPart),
+                                ObjectDefinition = webPartModel,
+                                ModelHost = modelHost
+                            });
+                        }
+
+                        context.ExecuteQueryWithTrace();
+
+                        if (webPartAddedDefinition != null && webPartAddedDefinition.ServerObjectIsNull == false)
+                        {
+                            existingWebPart = webPartAddedDefinition.WebPart;
+                            webPartStoreKey = webPartAddedDefinition.Id;
+                        }
+
+                        InternalOnAfterWebPartProvision(new WebPartProcessingContext
+                        {
+                            ListItemModelHost = listItemModelHost,
+                            WebPartDefinition = webPartModel,
+                            WebPartStoreKey = webPartStoreKey
+                        });
+
+                        return pageFile;
+                    }, doesFileHasListItem);
             }
-
-            // TODO
-            var doesFileHasListItem =
-                //Forms folders
-               !(listItemModelHost.HostFolder != null
-                &&
-                (listItemModelHost.HostFolder.Properties.FieldValues.ContainsKey("vti_winfileattribs")
-                 && listItemModelHost.HostFolder.Properties.FieldValues["vti_winfileattribs"].ToString() == "00000012"));
-
-            ModuleFileModelHandler.WithSafeFileOperation(listItemModelHost.HostList,
-                currentPageFile, pageFile =>
+            finally
             {
-                Guid? webPartStoreKey = null;
-
-                InternalOnBeforeWebPartProvision(new WebPartProcessingContext
-                {
-                    ListItemModelHost = listItemModelHost,
-                    WebPartDefinition = webPartModel,
-                    WebPartStoreKey = webPartStoreKey
-                });
-
-                //var fileContext = pageFile.Context;
-                ListItem fileListItem = null;
-
-                if (webPartModel.AddToPageContent)
-                {
-                    // pre load here to be used later
-
-                    var fileContext = pageFile.Context;
-
-                    fileListItem = pageFile.ListItemAllFields;
-
-                    fileContext.Load(fileListItem);
-                    fileContext.ExecuteQueryWithTrace();
-                }
-
-                var webPartManager = pageFile.GetLimitedWebPartManager(PersonalizationScope.Shared);
-
-                // web part on the page
-                var webpartOnPage = webPartManager.WebParts.Include(wp => wp.Id, wp => wp.WebPart);
-                var webPartDefenitions = context.LoadQuery(webpartOnPage);
-
-                context.ExecuteQueryWithTrace();
-
-                Microsoft.SharePoint.Client.WebParts.WebPartDefinition wpDefinition;
-
-                WebPart existingWebPart = null;
-
-                // TODO
-                var tmpWp = FindExistingWebPart(webPartDefenitions, webPartModel, out wpDefinition);
-
-                InvokeOnModelEvent(this, new ModelEventArgs
-                {
-                    CurrentModelNode = null,
-                    Model = null,
-                    EventType = ModelEventType.OnProvisioning,
-                    Object = existingWebPart,
-                    ObjectType = typeof(WebPart),
-                    ObjectDefinition = webPartModel,
-                    ModelHost = modelHost
-                });
-
-                if (wpDefinition != null)
-                {
-                    OldWebParKey = wpDefinition.Id;
-
-                    TraceService.Information((int)LogEventId.ModelProvisionProcessingNewObject,
-                        "Deleting current web part.");
-
-                    wpDefinition.DeleteWebPart();
-                    wpDefinition.Context.ExecuteQueryWithTrace();
-                }
-                else
-                {
-                    existingWebPart = tmpWp;
-                }
-
-                Microsoft.SharePoint.Client.WebParts.WebPartDefinition webPartAddedDefinition = null;
-
-                if (existingWebPart == null)
-                {
-                    TraceService.Information((int)LogEventId.ModelProvisionProcessingNewObject,
-                        "Processing new web part");
-
-                    var webPartXML = GetWebpartXmlDefinition(listItemModelHost, webPartModel);
-                    webPartXML = ProcessCommonWebpartProperties(webPartXML, webPartModel);
-
-                    //// handle wiki page
-                    //if (webPartModel.AddToPageContent)
-                    //{
-
-                    //    HandleWikiPageProvision(fileListItem, webPartModel);
-                    //}
-
-                    var webPartDefinition = webPartManager.ImportWebPart(webPartXML);
-                    webPartAddedDefinition = webPartManager.AddWebPart(webPartDefinition.WebPart,
-                                                                       webPartModel.ZoneId,
-                                                                       webPartModel.ZoneIndex);
-
-                    context.Load(webPartAddedDefinition);
-                    context.ExecuteQueryWithTrace();
-
-                    if (webPartAddedDefinition != null && webPartAddedDefinition.ServerObjectIsNull == false)
-                    {
-                        existingWebPart = webPartAddedDefinition.WebPart;
-                        webPartStoreKey = webPartAddedDefinition.Id;
-                    }
-
-                    // handle wiki page
-                    if (webPartModel.AddToPageContent)
-                    {
-                        HandleWikiPageProvision(fileListItem, webPartModel, webPartStoreKey, OldWebParKey);
-                    }
-
-                    existingWebPart = webPartDefinition.WebPart;
-
-                    InvokeOnModelEvent(this, new ModelEventArgs
-                    {
-                        CurrentModelNode = null,
-                        Model = null,
-                        EventType = ModelEventType.OnProvisioned,
-                        Object = existingWebPart,
-                        ObjectType = typeof(WebPart),
-                        ObjectDefinition = webPartModel,
-                        ModelHost = modelHost
-                    });
-                }
-                else
-                {
-                    TraceService.Information((int)LogEventId.ModelProvisionProcessingExistingObject,
-                        "Processing existing web part");
-
-                    if (webPartModel.AddToPageContent)
-                    {
-                        //HandleWikiPageProvision(fileListItem, webPartModel);
-                    }
-
-                    InvokeOnModelEvent(this, new ModelEventArgs
-                    {
-                        CurrentModelNode = null,
-                        Model = null,
-                        EventType = ModelEventType.OnProvisioned,
-                        Object = existingWebPart,
-                        ObjectType = typeof(WebPart),
-                        ObjectDefinition = webPartModel,
-                        ModelHost = modelHost
-                    });
-                }
-
-                context.ExecuteQueryWithTrace();
-
-                if (webPartAddedDefinition != null && webPartAddedDefinition.ServerObjectIsNull == false)
-                {
-                    existingWebPart = webPartAddedDefinition.WebPart;
-                    webPartStoreKey = webPartAddedDefinition.Id;
-                }
-
-                InternalOnAfterWebPartProvision(new WebPartProcessingContext
-                {
-                    ListItemModelHost = listItemModelHost,
-                    WebPartDefinition = webPartModel,
-                    WebPartStoreKey = webPartStoreKey
-                });
-
-                return pageFile;
-            }, doesFileHasListItem);
+                OnAfterDeploy(listItemModelHost, webPartModel);
+            }
         }
 
         protected virtual void InternalOnBeforeWebPartProvision(WebPartProcessingContext context)
@@ -537,7 +580,7 @@ namespace SPMeta2.CSOM.ModelHandlers
         }
 
         private void HandleWikiPageProvision(ListItem listItem,
-            WebPartDefinitionBase webpartModel, Guid? webPartStoreKey, Guid? oldWebParKey)
+            WebPartDefinitionBase webpartModel, Guid? currentWebPartStoreKey, Guid? oldWebParStoreKey)
         {
             if (!webpartModel.AddToPageContent)
                 return;
@@ -566,36 +609,43 @@ namespace SPMeta2.CSOM.ModelHandlers
                 return;
             }
 
-            var wikiTemplate = new StringBuilder();
-
+            // any on the page?
             var existingWebPartId = string.Empty;
 
-            var definitionWebPartId = webpartModel.Id.ToString()
-                                      .Replace("g_", string.Empty)
-                                      .Replace("_", "-"); ;
+            // current from the new provision
+            var upcomingWebPartId = string.Empty;
 
-            var upcomingWebPartId = definitionWebPartId;
+            // weird, by some web part ignor ID from the XML
+            // so webpartStoreKey from the previous CSOM adding web part to the page must be used
 
-            // aa....
-            // extremely unfortunate 
-            if (webpartModel is XsltListViewWebPartDefinition)
+            // M2 covers that fact with the regression testing, so we know what are they
+            // and we have NOD idea why it happens 
+            if (ShouldUseWebPartStoreKeyForWikiPage)
             {
-                upcomingWebPartId = webPartStoreKey.ToString()
+                upcomingWebPartId = currentWebPartStoreKey.ToString()
                                       .Replace("g_", string.Empty)
                                       .Replace("_", "-"); ;
             }
+            else
+            {
+                // get from the model
+                upcomingWebPartId = webpartModel.Id.ToString()
+                                       .Replace("g_", string.Empty)
+                                       .Replace("_", "-"); ;
+            }
 
-            if (!oldWebParKey.HasGuidValue())
+            if (!oldWebParStoreKey.HasGuidValue())
             {
                 // first provision
-                existingWebPartId = webPartStoreKey.ToString()
+                existingWebPartId = currentWebPartStoreKey.ToString()
                                       .Replace("g_", string.Empty)
                                       .Replace("_", "-");
             }
             else
             {
-                // second, so that we had web part and use that ID
-                existingWebPartId = oldWebParKey.ToString()
+                // second provision, 
+                // we had web part on the page and can reuse that ID to relink on wiki content
+                existingWebPartId = oldWebParStoreKey.ToString()
                                       .Replace("g_", string.Empty)
                                       .Replace("_", "-");
             }
@@ -603,6 +653,8 @@ namespace SPMeta2.CSOM.ModelHandlers
             var content = listItem[targetFieldName] == null
                 ? string.Empty
                 : listItem[targetFieldName].ToString();
+
+            var wikiTemplate = new StringBuilder();
 
             // actual ID will be replaced later
             wikiTemplate.AppendFormat("​​​​​​​​​​​​​​​​​​​​​​<div class='ms-rtestate-read ms-rte-wpbox' contentEditable='false'>");
@@ -628,13 +680,16 @@ namespace SPMeta2.CSOM.ModelHandlers
             }
             else
             {
-                // we had web part on the page
-                // so we need to change the ID
-                if (oldWebParKey.HasGuidValue())
+                // there is a content on the page
+                // there might be some web parts too
+                if (oldWebParStoreKey.HasGuidValue())
                 {
-                    // was old on the page?
+                    // there was an old web part on the page
+                    // checking if markup has the ID
+
                     if (content.ToUpper().IndexOf(existingWebPartId.ToUpper()) != -1)
                     {
+                        // was old web part on the page?
                         // yes, replacing ID
                         TraceService.VerboseFormat((int)LogEventId.ModelProvisionCoreCall,
                             string.Format("Replacing web part with ID: [{0}] to [{1}] on the page content.",
@@ -649,7 +704,7 @@ namespace SPMeta2.CSOM.ModelHandlers
                         context.ExecuteQueryWithTrace();
                     }
                     // original from the definigion?
-                    else if (content.ToUpper().IndexOf(definitionWebPartId.ToUpper()) != -1)
+                    else if (content.ToUpper().IndexOf(upcomingWebPartId.ToUpper()) != -1)
                     {
                         // yes, replacing ID
                         TraceService.VerboseFormat((int)LogEventId.ModelProvisionCoreCall,
@@ -657,7 +712,7 @@ namespace SPMeta2.CSOM.ModelHandlers
                                 existingWebPartId, upcomingWebPartId),
                             null);
 
-                        content = content.Replace(definitionWebPartId, upcomingWebPartId);
+                        // do nothing
 
                         listItem[targetFieldName] = content;
                         listItem.Update();
@@ -674,7 +729,7 @@ namespace SPMeta2.CSOM.ModelHandlers
                                 existingWebPartId
                             });
 
-                        content = string.Format(wikiTemplateOutput, upcomingWebPartId);
+                        content = content + string.Format(wikiTemplateOutput, upcomingWebPartId);
 
                         listItem[targetFieldName] = content;
                         listItem.Update();
@@ -684,19 +739,10 @@ namespace SPMeta2.CSOM.ModelHandlers
                 }
                 else
                 {
-                    // first provision, no web parts on the wiki page
-
-                    // there should be a definition based web part id in the template
-                    // updatting to a upcoming ID
-                    if (content.ToUpper().IndexOf(definitionWebPartId.ToUpper()) != -1)
+                    // first provision of the web part on the page
+                    if (content.ToUpper().IndexOf(upcomingWebPartId.ToUpper()) != -1)
                     {
-                        // yes, replacing ID
-                        TraceService.VerboseFormat((int)LogEventId.ModelProvisionCoreCall,
-                            string.Format("Replacing web part with ID: [{0}] to [{1}] on the page content.",
-                                definitionWebPartId, upcomingWebPartId),
-                            null);
-
-                        content = content.Replace(definitionWebPartId, upcomingWebPartId);
+                        // do nothing
 
                         listItem[targetFieldName] = content;
                         listItem.Update();
@@ -713,7 +759,7 @@ namespace SPMeta2.CSOM.ModelHandlers
                                 existingWebPartId
                             });
 
-                        content = string.Format(wikiTemplateOutput, upcomingWebPartId);
+                        content = content + string.Format(wikiTemplateOutput, upcomingWebPartId);
 
                         listItem[targetFieldName] = content;
                         listItem.Update();
@@ -723,6 +769,8 @@ namespace SPMeta2.CSOM.ModelHandlers
                 }
             }
         }
+
+
 
         protected WebPart FindExistingWebPart(
             IEnumerable<Microsoft.SharePoint.Client.WebParts.WebPartDefinition> webPartDefenitions,
