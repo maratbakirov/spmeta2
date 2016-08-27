@@ -38,6 +38,12 @@ namespace SPMeta2
             RegisterService(typeof(DefinitionRelationshipServiceBase), new DefaultDefinitionRelationshipService());
 
             RegisterService(typeof(ModelCompatibilityServiceBase), new DefaultModelCompatibilityService());
+
+            RegisterService(typeof(DefaultDiagnosticInfoService), new DefaultDiagnosticInfoService());
+
+            RegisterService(typeof(ModelPrettyPrintServiceBase), new DefaultModelPrettyPrintService());
+            RegisterService(typeof(ModelDotGraphPrintServiceBase), new DefaultModelDotGraphPrintService());
+
         }
 
         #endregion

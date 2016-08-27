@@ -161,6 +161,9 @@ namespace SPMeta2.SSOM.ModelHandlers.Webparts
 
             if (list != null)
             {
+                // for the list from other than current webs
+                typedWebpart.WebId = targetWeb.ID;
+
                 typedWebpart.ListName = list.ID.ToString("B").ToUpperInvariant();
                 typedWebpart.TitleUrl = list.DefaultViewUrl;
             }
@@ -174,6 +177,11 @@ namespace SPMeta2.SSOM.ModelHandlers.Webparts
                     srcView = list.Views[typedModel.ViewId.Value];
                 else if (!string.IsNullOrEmpty(typedModel.ViewName))
                     srcView = list.Views[typedModel.ViewName];
+                else if (!string.IsNullOrEmpty(typedModel.ViewUrl))
+                {
+                    srcView = list.Views.OfType<SPView>()
+                        .FirstOrDefault(v => v.ServerRelativeUrl.ToUpper().EndsWith(typedModel.ViewUrl.ToUpper()));
+                }
 
                 if (srcView != null)
                 {
@@ -185,7 +193,7 @@ namespace SPMeta2.SSOM.ModelHandlers.Webparts
                         var hiddenView = list.Views[new Guid(typedWebpart.ViewGuid)];
 
                         hiddenView.SetViewXml(srcView.GetViewXml());
-                     
+
                         hiddenView.Update();
                     }
                     else

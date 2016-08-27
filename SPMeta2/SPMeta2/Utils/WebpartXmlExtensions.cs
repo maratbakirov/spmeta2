@@ -305,6 +305,45 @@ namespace SPMeta2.Utils
             return SetOrUpdateProperty(webpartXmlDocument, name, value);
         }
 
+        public static XDocument SetWebId(this XDocument webpartXmlDocument, string value)
+        {
+            var name = MethodBase.GetCurrentMethod().Name.Replace("Set", string.Empty);
+            return SetOrUpdateProperty(webpartXmlDocument, name, value);
+        }
+
+        public static string GetListGuid(this XDocument webpartXmlDocument)
+        {
+            var name = MethodBase.GetCurrentMethod().Name.Replace("Get", string.Empty);
+            return GetProperty(webpartXmlDocument, name);
+        }
+
+
+
+        public static string GetGroupStyle(this XDocument webpartXmlDocument)
+        {
+            var name = MethodBase.GetCurrentMethod().Name.Replace("Get", string.Empty);
+            return GetProperty(webpartXmlDocument, name);
+        }
+
+        public static string GetItemStyle(this XDocument webpartXmlDocument)
+        {
+            var name = MethodBase.GetCurrentMethod().Name.Replace("Get", string.Empty);
+            return GetProperty(webpartXmlDocument, name);
+        }
+
+        public static string GetWebUrl(this XDocument webpartXmlDocument)
+        {
+            var name = MethodBase.GetCurrentMethod().Name.Replace("Get", string.Empty);
+            return GetProperty(webpartXmlDocument, name);
+        }
+
+
+        public static string GetWebId(this XDocument webpartXmlDocument)
+        {
+            var name = MethodBase.GetCurrentMethod().Name.Replace("Get", string.Empty);
+            return GetProperty(webpartXmlDocument, name);
+        }
+
         public static string GetListId(this XDocument webpartXmlDocument)
         {
             var name = MethodBase.GetCurrentMethod().Name.Replace("Get", string.Empty);

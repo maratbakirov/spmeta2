@@ -39,6 +39,8 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
             public Guid DefaultViewId { get; set; }
 
             public List List { get; set; }
+
+            public Guid WebId { get; set; }
         }
 
         #endregion
@@ -56,44 +58,59 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
 
         protected override string GetWebpartXmlDefinition(ListItemModelHost listItemModelHost, WebPartDefinitionBase webPartModel)
         {
-            var wpModel = webPartModel.WithAssertAndCast<XsltListViewWebPartDefinition>("model", value => value.RequireNotNull());
-            var bindContext = LookupBindContext(listItemModelHost, wpModel);
+            var typedModel = webPartModel.WithAssertAndCast<XsltListViewWebPartDefinition>("model", value => value.RequireNotNull());
+            var bindContext = LookupBindContext(listItemModelHost, typedModel);
 
             var wpXml = WebpartXmlExtensions.LoadWebpartXmlDocument(BuiltInWebPartTemplates.XsltListViewWebPart)
                                 .SetListName(bindContext.ListId.ToString())
                                 .SetListId(bindContext.ListId.ToString())
+                                .SetWebId(bindContext.WebId.ToString())
                                 .SetTitleUrl(bindContext.TitleUrl)
-                                .SetJSLink(wpModel.JSLink);
+                                .SetJSLink(typedModel.JSLink);
 
-            if (wpModel.CacheXslStorage.HasValue)
-                wpXml.SetOrUpdateProperty("CacheXslStorage", wpModel.CacheXslStorage.Value.ToString());
+            if (typedModel.CacheXslStorage.HasValue)
+                wpXml.SetOrUpdateProperty("CacheXslStorage", typedModel.CacheXslStorage.Value.ToString());
 
-            if (wpModel.CacheXslTimeOut.HasValue)
-                wpXml.SetOrUpdateProperty("CacheXslTimeOut", wpModel.CacheXslTimeOut.Value.ToString());
+            if (typedModel.CacheXslTimeOut.HasValue)
+                wpXml.SetOrUpdateProperty("CacheXslTimeOut", typedModel.CacheXslTimeOut.Value.ToString());
 
-            if (!string.IsNullOrEmpty(wpModel.BaseXsltHashKey))
-                wpXml.SetOrUpdateProperty("BaseXsltHashKey", wpModel.BaseXsltHashKey);
+            if (!string.IsNullOrEmpty(typedModel.BaseXsltHashKey))
+                wpXml.SetOrUpdateProperty("BaseXsltHashKey", typedModel.BaseXsltHashKey);
 
             // xsl
-            if (!string.IsNullOrEmpty(wpModel.Xsl))
-                wpXml.SetOrUpdateCDataProperty("Xsl", wpModel.Xsl);
+            if (!string.IsNullOrEmpty(typedModel.Xsl))
+                wpXml.SetOrUpdateCDataProperty("Xsl", typedModel.Xsl);
 
-            if (!string.IsNullOrEmpty(wpModel.XslLink))
-                wpXml.SetOrUpdateProperty("XslLink", wpModel.XslLink);
+            if (!string.IsNullOrEmpty(typedModel.XslLink))
+                wpXml.SetOrUpdateProperty("XslLink", typedModel.XslLink);
 
-            if (!string.IsNullOrEmpty(wpModel.GhostedXslLink))
-                wpXml.SetOrUpdateProperty("GhostedXslLink", wpModel.GhostedXslLink);
+            if (!string.IsNullOrEmpty(typedModel.GhostedXslLink))
+                wpXml.SetOrUpdateProperty("GhostedXslLink", typedModel.GhostedXslLink);
 
             // xml
-            if (!string.IsNullOrEmpty(wpModel.XmlDefinition))
-                wpXml.SetOrUpdateCDataProperty("XmlDefinition", wpModel.XmlDefinition);
+            if (!string.IsNullOrEmpty(typedModel.XmlDefinition))
+                wpXml.SetOrUpdateCDataProperty("XmlDefinition", typedModel.XmlDefinition);
 
-            if (!string.IsNullOrEmpty(wpModel.XmlDefinitionLink))
-                wpXml.SetOrUpdateProperty("XmlDefinitionLink", wpModel.XmlDefinitionLink);
+            if (!string.IsNullOrEmpty(typedModel.XmlDefinitionLink))
+                wpXml.SetOrUpdateProperty("XmlDefinitionLink", typedModel.XmlDefinitionLink);
 
 #if !NET35
-            if (wpModel.ShowTimelineIfAvailable.HasValue)
-                wpXml.SetOrUpdateProperty("ShowTimelineIfAvailable", wpModel.ShowTimelineIfAvailable.Value.ToString());
+            if (typedModel.ShowTimelineIfAvailable.HasValue)
+                wpXml.SetOrUpdateProperty("ShowTimelineIfAvailable", typedModel.ShowTimelineIfAvailable.Value.ToString());
+#endif
+
+            if (typedModel.DisableColumnFiltering.HasValue)
+                wpXml.SetOrUpdateProperty("DisableColumnFiltering", typedModel.DisableColumnFiltering.Value.ToString());
+
+#if !NET35
+            if (typedModel.DisableSaveAsNewViewButton.HasValue)
+                wpXml.SetOrUpdateProperty("DisableSaveAsNewViewButton", typedModel.DisableSaveAsNewViewButton.Value.ToString());
+
+            if (typedModel.DisableViewSelectorMenu.HasValue)
+                wpXml.SetOrUpdateProperty("DisableViewSelectorMenu", typedModel.DisableViewSelectorMenu.Value.ToString());
+
+            if (typedModel.InplaceSearchEnabled.HasValue)
+                wpXml.SetOrUpdateProperty("InplaceSearchEnabled", typedModel.InplaceSearchEnabled.Value.ToString());
 #endif
 
             return wpXml.ToString();
@@ -274,14 +291,14 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
             return LookupBindContext(listItemModelHost,
                 wpModel.WebUrl, wpModel.WebId,
                 wpModel.ListUrl, wpModel.ListTitle, wpModel.ListId,
-                wpModel.ViewName, wpModel.ViewId,
+                wpModel.ViewUrl, wpModel.ViewName, wpModel.ViewId,
                 wpModel.TitleUrl);
         }
 
         internal static ListBindContext LookupBindContext(ListItemModelHost listItemModelHost,
            string webUrl, Guid? webId,
            string listUrl, string listTitle, Guid? listId,
-           string viewTitle, Guid? viewId,
+           string viewUrl, string viewTitle, Guid? viewId,
             string webPartTitleUrl
             )
         {
@@ -300,6 +317,8 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
                 targetWeb = new LookupFieldModelHandler()
                                 .GetTargetWeb(listItemModelHost.HostClientContext.Site,
                                         webUrl, webId);
+
+                result.WebId = targetWeb.Id;
             }
 
             var list = LookupList(targetWeb, listUrl, listTitle, listId);
@@ -310,6 +329,16 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
                 view = list.Views.GetById(viewId.Value);
             else if (!string.IsNullOrEmpty(viewTitle))
                 view = list.Views.GetByTitle(viewTitle);
+            else if (!string.IsNullOrEmpty(viewUrl))
+            {
+                var views = list.Views;
+
+                context.Load(views, v => v.Include(r => r.ServerRelativeUrl));
+                context.ExecuteQueryWithTrace();
+
+                view = views.ToArray()
+                            .FirstOrDefault(v => v.ServerRelativeUrl.ToUpper().EndsWith(viewUrl.ToUpper()));
+            }
 
             context.Load(list, l => l.Id);
             context.Load(list, l => l.DefaultViewUrl);
@@ -343,6 +372,9 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
             }
 
             result.ListId = list.Id;
+            result.List = list;
+
+
             result.List = list;
 
             if (webPartTitleUrl == null)
