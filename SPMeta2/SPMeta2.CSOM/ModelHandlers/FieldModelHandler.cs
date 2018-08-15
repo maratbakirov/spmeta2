@@ -16,7 +16,7 @@ namespace SPMeta2.CSOM.ModelHandlers
 {
     public class FieldModelHandler : CSOMModelHandlerBase
     {
-        #region construactors
+        #region constructors
 
         static FieldModelHandler()
         {
@@ -51,10 +51,6 @@ namespace SPMeta2.CSOM.ModelHandlers
                 new XAttribute(BuiltInFieldAttributes.Group, String.Empty),
                 new XAttribute(BuiltInFieldAttributes.CanToggleHidden, "TRUE"));
         }
-
-        #endregion
-
-        #region methods
 
         protected virtual bool PreloadProperties(Field field)
         {
@@ -148,26 +144,31 @@ namespace SPMeta2.CSOM.ModelHandlers
                 ModelHost = modelHost
             });
 
-            if (modelHost is SiteModelHost)
+            if (modelHost is ListModelHost)
             {
-                var siteHost = modelHost as SiteModelHost;
-                context = siteHost.HostSite.Context;
+                var listHost = modelHost as ListModelHost;
+                context = listHost.HostList.Context;
 
-                currentField = DeploySiteField(siteHost as SiteModelHost, fieldModel);
+                currentField = DeployListField(modelHost as ListModelHost, fieldModel);
             }
-            if (modelHost is WebModelHost)
+            else if (modelHost is WebModelHost)
             {
                 var webHost = modelHost as WebModelHost;
                 context = webHost.HostWeb.Context;
 
                 currentField = DeployWebField(webHost as WebModelHost, fieldModel);
             }
-            else if (modelHost is ListModelHost)
-            {
-                var listHost = modelHost as ListModelHost;
-                context = listHost.HostList.Context;
 
-                currentField = DeployListField(modelHost as ListModelHost, fieldModel);
+            else if (modelHost is SiteModelHost)
+            {
+                var siteHost = modelHost as SiteModelHost;
+                context = siteHost.HostSite.Context;
+
+                currentField = DeploySiteField(siteHost as SiteModelHost, fieldModel);
+            }
+            else
+            {
+                throw new ArgumentException("modelHost needs to be SiteModelHost/WebModelHost/ListModelHost instance.");
             }
 
             object typedField = null;
@@ -196,8 +197,19 @@ namespace SPMeta2.CSOM.ModelHandlers
                 ModelHost = modelHost
             });
 
-            TraceService.Verbose((int)LogEventId.ModelProvisionCoreCall, "UpdateAndPushChanges(true)");
-            currentField.UpdateAndPushChanges(true);
+            if (fieldModel.PushChangesToLists.HasValue)
+            {
+                TraceService.Verbose((int)LogEventId.ModelProvisionCoreCall,
+                    string.Format("UpdateAndPushChanges({0})", fieldModel.PushChangesToLists));
+
+                currentField.UpdateAndPushChanges(fieldModel.PushChangesToLists.Value);
+            }
+            else
+            {
+                TraceService.Verbose((int)LogEventId.ModelProvisionCoreCall, "UpdateAndPushChanges(true)");
+                // Why does SSOM handler distinguish between list and web/site fields and csom doesn't?
+                currentField.UpdateAndPushChanges(true);
+            }
 
             TraceService.Verbose((int)LogEventId.ModelProvisionCoreCall, "ExecuteQuery()");
             context.ExecuteQueryWithTrace();
@@ -283,6 +295,9 @@ namespace SPMeta2.CSOM.ModelHandlers
 
             field.Required = definition.Required;
 
+            if (definition.ReadOnlyField.HasValue)
+                field.ReadOnlyField = definition.ReadOnlyField.Value;
+
             if (!string.IsNullOrEmpty(definition.StaticName))
                 field.StaticName = definition.StaticName;
 
@@ -305,7 +320,11 @@ namespace SPMeta2.CSOM.ModelHandlers
                 field.Indexed = definition.Indexed;
             }
 
-            field.JSLink = definition.JSLink;
+            // setting up JS link seems to crash fields provision in some cases
+            // Issue deploying fields to Site attached to Office 365 Group #945
+            // https://github.com/SubPointSolutions/spmeta2/issues/945
+            if (!string.IsNullOrEmpty(definition.JSLink))
+                field.JSLink = definition.JSLink;
 #endif
 
 #if !NET35
@@ -444,8 +463,10 @@ namespace SPMeta2.CSOM.ModelHandlers
                 fieldTemplate.SetAttribute(BuiltInFieldAttributes.StaticName, fieldModel.InternalName);
 
             // additions
+#if !NET35
             if (!String.IsNullOrEmpty(fieldModel.JSLink))
                 fieldTemplate.SetAttribute(BuiltInFieldAttributes.JSLink, fieldModel.JSLink);
+#endif
 
             if (!string.IsNullOrEmpty(fieldModel.DefaultValue))
                 fieldTemplate.SetSubNode("Default", fieldModel.DefaultValue);

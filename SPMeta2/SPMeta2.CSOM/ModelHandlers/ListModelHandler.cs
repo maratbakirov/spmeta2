@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text;
+
 using Microsoft.SharePoint.Client;
 
 using SPMeta2.CSOM.DefaultSyntax;
@@ -38,12 +38,14 @@ namespace SPMeta2.CSOM.ModelHandlers
             Web web = null;
             List hostList = null;
 
-            if (modelHost is WebModelHost)
-                web = (modelHost as WebModelHost).HostWeb;
-            else if (modelHost is ListModelHost)
+            if (modelHost is ListModelHost)
             {
                 web = (modelHost as ListModelHost).HostList.ParentWeb;
                 hostList = (modelHost as ListModelHost).HostList;
+            }
+            else if (modelHost is WebModelHost)
+            {
+                web = (modelHost as WebModelHost).HostWeb;
             }
             else
             {
@@ -404,7 +406,7 @@ namespace SPMeta2.CSOM.ModelHandlers
             return listTemplate;
         }
 
-        private void MapListProperties(object modelHost,  List list, ListDefinition definition)
+        private void MapListProperties(object modelHost, List list, ListDefinition definition)
         {
             var csomModelHost = modelHost.WithAssertAndCast<CSOMModelHostBase>("modelHost", value => value.RequireNotNull());
 
@@ -468,7 +470,7 @@ namespace SPMeta2.CSOM.ModelHandlers
             {
                 if (ReflectionUtils.HasProperty(list, "MajorVersionLimit"))
                 {
-                    context.AddQuery(new ClientActionSetProperty(list, "MajorVersionLimit", definition.MajorVersionLimit.Value));
+                    ClientRuntimeQueryService.SetProperty(list, "MajorVersionLimit", definition.MajorVersionLimit.Value);
                 }
                 else
                 {
@@ -483,7 +485,7 @@ namespace SPMeta2.CSOM.ModelHandlers
             {
                 if (ReflectionUtils.HasProperty(list, "MajorWithMinorVersionsLimit"))
                 {
-                    context.AddQuery(new ClientActionSetProperty(list, "MajorWithMinorVersionsLimit", definition.MajorWithMinorVersionsLimit.Value));
+                    ClientRuntimeQueryService.SetProperty(list, "MajorWithMinorVersionsLimit", definition.MajorWithMinorVersionsLimit.Value);
                 }
                 else
                 {
@@ -491,6 +493,28 @@ namespace SPMeta2.CSOM.ModelHandlers
                         string.Format(
                             "CSOM runtime doesn't have [{0}] methods support. Update CSOM runtime to a new version. Provision is skipped",
                             string.Join(", ", new string[] { "MajorWithMinorVersionsLimit" })));
+                }
+            }
+
+            if (definition.ReadSecurity.HasValue)
+            {
+                if (ReflectionUtils.HasProperty(list, "ReadSecurity"))
+                    ClientRuntimeQueryService.SetProperty(list, "ReadSecurity", definition.ReadSecurity.Value);
+                else
+                {
+                    TraceService.Critical((int)LogEventId.ModelProvisionCoreCall,
+                        "CSOM runtime doesn't have List.ReadSecurity. Update CSOM runtime to a new version. Provision is skipped");
+                }
+            }
+
+            if (definition.WriteSecurity.HasValue)
+            {
+                if (ReflectionUtils.HasProperty(list, "WriteSecurity"))
+                    ClientRuntimeQueryService.SetProperty(list, "WriteSecurity", definition.WriteSecurity.Value);
+                else
+                {
+                    TraceService.Critical((int)LogEventId.ModelProvisionCoreCall,
+                        "CSOM runtime doesn't have List.WriteSecurity. Update CSOM runtime to a new version. Provision is skipped");
                 }
             }
 
@@ -567,7 +591,6 @@ namespace SPMeta2.CSOM.ModelHandlers
             return null;
         }
 
-
         #endregion
 
         public override Type TargetType
@@ -583,7 +606,5 @@ namespace SPMeta2.CSOM.ModelHandlers
                 { "DescriptionResource", definition.DescriptionResource },
             });
         }
-
-
     }
 }

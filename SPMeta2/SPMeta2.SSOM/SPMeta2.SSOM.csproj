@@ -200,6 +200,8 @@
     <Compile Include="Extensions\SPViewCollectionExtensions.cs" />
     <Compile Include="Extensions\WebPartExtensions.cs" />
     <Compile Include="ModelHandlers\AnonymousAccessSettingsModelHandler.cs" />
+    <Compile Include="ModelHandlers\SuiteBarModelHandler.cs" />
+    <Compile Include="ModelHandlers\OfficialFileHostModelHandler.cs" />
     <Compile Include="ModelHandlers\AuditSettingsModelHandler.cs" />
     <Compile Include="ModelHandlers\Base\ContentFileModelHandlerBase.cs" />
     <Compile Include="ModelHandlers\Base\MasterPageModelHandlerBase.cs" />
@@ -209,6 +211,7 @@
     <Compile Include="ModelHandlers\ClearRecycleBinModelHandler.cs" />
     <Compile Include="ModelHandlers\ComposedLookItemLinkModelHandler.cs" Condition="'$(spRuntime)'=='15' Or '$(spRuntime)'=='16' Or '$(Configuration)'=='Debug'" />
     <Compile Include="ModelHandlers\DeleteWebPartsModelHandler.cs" />
+    <Compile Include="ModelHandlers\DiscussionReplyItemModelHandler.cs" />
     <Compile Include="ModelHandlers\DocumentParserModelHandler.cs" />
     <Compile Include="ModelHandlers\AlternateUrlModelHandler.cs" />
     <Compile Include="ModelHandlers\AppModelHandler.cs" Condition="'$(spRuntime)'=='15' Or '$(spRuntime)'=='16' or  '$(Configuration)'=='Debug'" />
@@ -245,11 +248,14 @@
     <Compile Include="ModelHandlers\InformationRightsManagementSettingsModelHandler.cs" Condition="'$(spRuntime)'=='15' Or '$(spRuntime)'=='16' or  '$(Configuration)'=='Debug'" />
     <Compile Include="ModelHandlers\ListItemFieldValuesModelHandler.cs" />
     <Compile Include="ModelHandlers\HtmlMasterPageModelHandler.cs" />
+    <Compile Include="ModelHandlers\DiscussionItemModelHandler.cs" />
     <Compile Include="ModelHandlers\MasterPagePreviewModelHandler.cs" />
     <Compile Include="ModelHandlers\MasterPageModelHandler.cs" />
     <Compile Include="ModelHandlers\PeoplePickerSettingsModelHandler.cs" />
     <Compile Include="ModelHandlers\ResetRoleInheritanceModelHandler.cs" />
     <Compile Include="ModelHandlers\ComposedLookItemModelHandler.cs" Condition="'$(spRuntime)'=='15' Or '$(spRuntime)'=='16' or  '$(Configuration)'=='Debug'" />
+    <Compile Include="ModelHandlers\SharePointDesignerSettingsModelHandler.cs" />
+    <Compile Include="ModelHandlers\UserModelHandler.cs" />
     <Compile Include="ModelHandlers\SupportedUICultureModelHandler.cs" />
     <Compile Include="ModelHandlers\TreeViewSettingsModelHandler.cs" />
     <Compile Include="ModelHandlers\ManagedAccountModelHandler.cs" />
@@ -279,6 +285,8 @@
     <Compile Include="ModelHandlers\TopNavigationNodeModelHandler.cs" />
     <Compile Include="ModelHandlers\ContentTypes\UniqueContentTypeOrderModelHandler.cs" />
     <Compile Include="ModelHandlers\UserCustomActionModelHandler.cs" />
+    <Compile Include="ModelHandlers\DeveloperDashboardSettingsModelHandler.cs" />
+    <Compile Include="ModelHandlers\TrustedProviderDefinitionModelHandler.cs" />
     <Compile Include="ModelHandlers\WebApplicationModelHandler.cs" />
     <Compile Include="ModelHandlers\WebConfigModificationModelHandler.cs" />
     <Compile Include="ModelHandlers\RootWebModelHandler.cs" />
@@ -319,6 +327,7 @@
     <Compile Include="ModelHandlers\WelcomePageModelHandler.cs" />
     <Compile Include="ModelHandlers\WikiPageModelHandler.cs" />
     <Compile Include="ModelHandlers\WorkflowAssociationModelHandler.cs" />
+    <Compile Include="ModelHosts\ContentTypeModelHost.cs" />
     <Compile Include="ModelHosts\FarmModelHost.cs" />
     <Compile Include="ModelHosts\SecureStoreApplicationModelHost.cs" />
     <Compile Include="ModelHosts\FolderModelHost.cs" />
@@ -329,6 +338,7 @@
     <Compile Include="ModelHosts\SiteModelHost.cs" />
     <Compile Include="ModelHosts\SSOMModelHostBase.cs" />
     <Compile Include="ModelHosts\WebApplicationModelHost.cs" />
+    <Compile Include="ModelHosts\ContentTypeLinkModelHost.cs" />
     <Compile Include="ModelHosts\WebModelHost.cs" />
     <Compile Include="ModelHosts\WebpartPageModelHost.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -337,10 +347,15 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>PublishingPageTemplates.resx</DependentUpon>
     </Compile>
+    <Compile Include="Services\Impl\DefaultSSOMFarmPropertyBagStorage.cs" />
+    <Compile Include="Services\Impl\DefaultSSOMWebApplicationPropertyBagStorage.cs" />
+    <Compile Include="Services\Impl\DefaultSSOMWebPropertyBagStorage.cs" />
     <Compile Include="Services\SSOMContentTypeLookupService.cs" />
     <Compile Include="Services\SSOMDeleteNavigationNodesService.cs" />
     <Compile Include="Services\SSOMFieldLookupService.cs" />
+    <Compile Include="Services\SSOMListViewLookupService.cs" />
     <Compile Include="Services\SSOMLocalizationService.cs" />
+    <Compile Include="Services\SSOMIncrementalProvisionService.cs" />
     <Compile Include="Services\SSOMProvisionService.cs" />
     <Compile Include="Services\SSOMTokenReplacementService.cs" />
     <Compile Include="WebPartTemplates.Designer.cs">
@@ -374,6 +389,11 @@
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties BuildVersion_StartDate="2000/1/1" />
+    </VisualStudio>
+  </ProjectExtensions>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

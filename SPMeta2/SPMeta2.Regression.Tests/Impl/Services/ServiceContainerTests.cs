@@ -38,7 +38,12 @@ namespace SPMeta2.Regression.Tests.Impl.Services
                 typeof(DefaultDiagnosticInfoService),
 
                 typeof(ModelPrettyPrintServiceBase),
-                typeof(ModelDotGraphPrintServiceBase)
+                typeof(ModelDotGraphPrintServiceBase),
+
+                typeof(TryRetryServiceBase),
+
+                typeof(WebPartPageTemplatesServiceBase),
+                typeof(HashCodeServiceBase)
             };
 
             foreach (var serviceType in serviceTypes)

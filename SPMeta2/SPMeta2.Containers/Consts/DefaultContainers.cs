@@ -27,6 +27,18 @@ namespace SPMeta2.Containers.Consts
             }
         }
 
+        public static class DesignPackage
+        {
+            public static Guid SolutionId = new Guid("9083433c-2c01-4ce2-974d-dda6f70acc9f");
+
+            public static string Package_v10_FilePath = @"Containers\DesignPackages\ci-1-1.0.wsp";
+            public static string Package_v11_FilePath = @"Containers\DesignPackages\ci-1-1.1.wsp";
+            public static string Package_v12_FilePath = @"Containers\DesignPackages\ci-1-1.2.wsp";
+            public static string Package_v13_FilePath = @"Containers\DesignPackages\ci-1-1.3.wsp";
+            public static string Package_v14_FilePath = @"Containers\DesignPackages\ci-1-1.4.wsp";
+            public static string Package_v15_FilePath = @"Containers\DesignPackages\ci-1-1.5.wsp";
+        }
+
         public static class Sandbox
         {
             public static string FilePath = @"Containers\Sandbox\SPMeta2.Containers.SandboxSolutionContainer.wsp";
@@ -41,6 +53,20 @@ namespace SPMeta2.Containers.Consts
         {
             public static string FilePath = @"Containers\Farm\SPMeta2.Containers.FarmSolutionContainer.wsp";
             public static Guid SolutionId = new Guid("a4a2146d-57d1-48bd-a02e-ba97b371903d");
+        }
+
+      
+
+        public static class FarmSolutionWebScope
+        {
+            public static string FilePath = @"Containers\Farm\SPMeta2.Containers.FarmSolutionWebAppContainer.wsp";
+            public static Guid SolutionId = new Guid("c6cf3a69-1a73-4cc5-9c67-e3859a071197");
+        }
+
+        public static class FarmSolutionWebScope1
+        {
+            public static string FilePath = @"Containers\Farm\SPMeta2.Containers.FarmSolutionWebAppContainer1.wsp";
+            public static Guid SolutionId = new Guid("c21f84bc-1af5-4f19-b4bd-19e7047bf211");
         }
 
         public static class Apps

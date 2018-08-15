@@ -48,6 +48,8 @@ namespace SPMeta2.CSOM.Services
         /// Incorrect ~site token resolution for CSOM for the subwebs #863
         /// https://github.com/SubPointSolutions/spmeta2/issues/863
         /// </summary>
+        /// 
+        [Obsolete("Obsolete, isn't used anymore - Tokens in LookupWebUrl #1013 - https://github.com/SubPointSolutions/spmeta2/issues/1013")]
         public static bool AllowClientContextAsTokenReplacementContext { get; set; }
 
         #endregion
@@ -83,8 +85,46 @@ namespace SPMeta2.CSOM.Services
             foreach (var tokenInfo in TokenProcessInfos)
             {
                 if (!string.IsNullOrEmpty(result.Value))
-                    result.Value = tokenInfo.RegEx.Replace(result.Value, ResolveToken(context.Context, tokenInfo.Name));
+                {
+                    var replacedValue = tokenInfo.RegEx.Replace(result.Value, ResolveToken(context, context.Context, tokenInfo.Name));
+
+                    if (!string.IsNullOrEmpty(replacedValue))
+                    {
+                        // everything to '/'
+                        replacedValue = replacedValue.Replace(@"\", @"/");
+
+                        // replace doubles after '://'
+                        var urlParts = replacedValue.Split(new string[] { "://" }, StringSplitOptions.RemoveEmptyEntries);
+
+                        // return non 'protocol://' values
+                        if (urlParts.Count() == 1)
+                        {
+                            result.Value = urlParts[0].Replace(@"//", @"/");
+                        }
+                        else
+                        {
+                            var resultValues = new List<string>();
+
+                            resultValues.Add(urlParts[0]);
+
+                            foreach (var value in urlParts.Skip(1))
+                            {
+                                resultValues.Add(value.Replace(@"//", @"/"));
+                            }
+
+                            result.Value = string.Join("://", resultValues.ToArray());
+                        }
+                    }
+                    else
+                    {
+                        result.Value = replacedValue;
+                    }
+                }
             }
+
+            // remove ending slash, SharePoint removes it everywhere
+            if (result.Value.Length > 1)
+                result.Value = result.Value.TrimEnd('/');
 
             if (OnTokenReplaced != null)
             {
@@ -97,14 +137,21 @@ namespace SPMeta2.CSOM.Services
             return result;
         }
 
-        protected virtual string ResolveToken(object contextObject, string token)
+        protected virtual string ResolveToken(TokenReplacementContext tokenContext, object contextObject, string token)
         {
             if (string.Equals(token, "~sitecollection", StringComparison.CurrentCultureIgnoreCase))
             {
+                if (tokenContext.IsSiteRelativeUrl)
+                    return "/";
+
                 var site = ExtractSite(contextObject);
 
-                if (site.ServerRelativeUrl == "/")
-                    return string.Empty;
+                // Incorrect ~site/~sitecollection tokens resolve in NavigationNodes #1025
+                // https://github.com/SubPointSolutions/spmeta2/issues/1025
+                // always return '/' instead of empty string, further replacements would fix up double-'/'
+
+                //if (site.ServerRelativeUrl == "/")
+                //    return string.Empty;
 
                 return site.ServerRelativeUrl;
             }
@@ -113,8 +160,18 @@ namespace SPMeta2.CSOM.Services
             {
                 var web = ExtractWeb(contextObject);
 
-                if (web.ServerRelativeUrl == "/")
-                    return string.Empty;
+                if (tokenContext.IsSiteRelativeUrl)
+                {
+                    var site = ExtractSite(contextObject);
+                    return "/" + web.ServerRelativeUrl.Replace(site.ServerRelativeUrl, string.Empty);
+                }
+
+                // Incorrect ~site/~sitecollection tokens resolve in NavigationNodes #1025
+                // https://github.com/SubPointSolutions/spmeta2/issues/1025
+                // always return '/' instead of empty string, further replacements would fix up double-'/'
+
+                //if (web.ServerRelativeUrl == "/")
+                //    return string.Empty;
 
                 return web.ServerRelativeUrl;
             }

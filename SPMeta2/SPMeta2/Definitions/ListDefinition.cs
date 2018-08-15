@@ -129,6 +129,7 @@ namespace SPMeta2.Definitions
         /// 
         [ExpectValidation]
         [ExpectRequired(GroupName = "List Template")]
+        //[ExpectRequiredIntRange(MinValue = 0, MaxValue = int.MaxValue)]
         [DataMember]
         public int TemplateType { get; set; }
 
@@ -261,6 +262,10 @@ namespace SPMeta2.Definitions
         [ExpectValidation]
         public int? WriteSecurity { get; set; }
 
+        [DataMember]
+        //[ExpectValidation]
+        public int? ReadSecurity { get; set; }
+
         /// <summary>
         /// Represents SPList.NavigateForFormsPages property.
         /// Supported only with SSOM provision
@@ -270,6 +275,26 @@ namespace SPMeta2.Definitions
         [ExpectUpdate]
         [DataMember]
         public bool? NavigateForFormsPages { get; set; }
+
+        /// <summary>
+        /// Represents SPList.EnableAssignToEmail property.
+        /// Supported only with SSOM provision
+        /// https://github.com/SubPointSolutions/spmeta2/issues/1023
+        /// </summary>
+        [ExpectValidation]
+        [ExpectUpdate]
+        [DataMember]
+        public bool? EnableAssignToEmail { get; set; }
+
+        /// <summary>
+        /// Represents SPList.DisableGridEditing property.
+        /// Supported only with SSOM provision
+        /// https://github.com/SubPointSolutions/spmeta2/issues/1097
+        /// </summary>
+        [ExpectValidation]
+        [ExpectUpdate]
+        [DataMember]
+        public bool? DisableGridEditing { get; set; }
 
         #endregion
 

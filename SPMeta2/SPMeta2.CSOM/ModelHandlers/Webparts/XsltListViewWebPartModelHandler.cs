@@ -210,8 +210,13 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
 
                 if (typedDefinition.WebId.HasGuidValue() || !string.IsNullOrEmpty(typedDefinition.WebUrl))
                 {
-                    targetWeb = new LookupFieldModelHandler()
-                                    .GetTargetWeb(this.CurrentClientContext.Site, typedDefinition.WebUrl, typedDefinition.WebId);
+                    var lookupFieldModelHandler = new LookupFieldModelHandler();
+
+                    targetWeb = lookupFieldModelHandler.GetTargetWeb(
+                                    this.CurrentClientContext.Site,
+                                    typedDefinition.WebUrl,
+                                    typedDefinition.WebId,
+                                    provisionContext.ListItemModelHost);
                 }
 
                 var list = LookupList(targetWeb, typedDefinition.ListUrl, typedDefinition.ListTitle, typedDefinition.ListId);
@@ -233,7 +238,20 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
                     updatedSchemaXml.Root.ReplaceWith(originalSchemaXml.Root);
 
 #if !NET35
+                    // updating inner xml definition for view
                     hiddenView.ListViewXml = updatedSchemaXml.Root.GetInnerXmlAsString();
+                    
+                    // updating other attribute based properties, in the root node
+                    // partly related to following issue
+                    // List view scope does not apply in xslt list view webpart #1030
+                    // https://github.com/SubPointSolutions/spmeta2/issues/1030
+
+                    var scopeValue = updatedSchemaXml.Root.GetAttributeValue("Scope");
+
+                    if(!string.IsNullOrEmpty(scopeValue))
+                    {
+                        hiddenView.Scope = (ViewScope)Enum.Parse(typeof(ViewScope), scopeValue);
+                    }
 #endif
                 }
 
@@ -314,9 +332,14 @@ namespace SPMeta2.CSOM.ModelHandlers.Webparts
 
             if (webId.HasGuidValue() || !string.IsNullOrEmpty(webUrl))
             {
-                targetWeb = new LookupFieldModelHandler()
-                                .GetTargetWeb(listItemModelHost.HostClientContext.Site,
-                                        webUrl, webId);
+                var lookupFieldModelHandler = new LookupFieldModelHandler();
+
+                targetWeb = lookupFieldModelHandler
+                                .GetTargetWeb(
+                                        listItemModelHost.HostClientContext.Site,
+                                        webUrl, 
+                                        webId,
+                                        listItemModelHost);
 
                 result.WebId = targetWeb.Id;
             }

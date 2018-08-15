@@ -89,7 +89,7 @@ function BuildProfile($buildProfile) {
             Write-BError "`t[M2 Build] Expanding params:" -fore Red
                                     
             foreach($key in $buildProfile.Keys) {
-                Write-BError "`t$key":[$( $buildProfile[$key])] -fore Red
+                Write-BError "`t$key":[$($buildProfile[$key])] -fore Red
             }
 
 			throw "`t[M2 Build] !!! Build faild on profile:[$($buildProfile.Name)]. Please check output early to check the details. !!!" 
@@ -145,6 +145,7 @@ $o365Projects = @("SPMeta2", "SPMeta2.Standard", "SPMeta2.CSOM", "SPMeta2.CSOM.S
 
 # https://msdn.microsoft.com/en-us/library/ms164311.aspx
 $defaultBuildParams = " /t:Clean,Rebuild /p:Platform=AnyCPU /p:WarningLevel=0 /verbosity:quiet /clp:ErrorsOnly /nologo"
+#$defaultBuildParams = " /t:Clean,Rebuild /p:Platform=AnyCPU /p:WarningLevel=0 /verbosity:detailed /clp:ErrorsOnly /nologo"
 
 $isAppVeyor = $g_isAppVeyor
 
@@ -253,6 +254,18 @@ if($build365 -eq $true) {
         #"BuildParams" = ("/p:spRuntime=365 /p:Configuration=Debug45 /p:DefineConstants=NET45 " + $defaultBuildParams);
         "BuildParams" = ("/p:DefineConstants=NET45 " + $defaultBuildParams);
     }
+
+    $buildProfiles += @{
+        "Name"  = "M2 Regression CSOM NET45";
+        "ProjectNames" = @('SPMeta2.Regression.CSOM', 'SPMeta2.Regression.CSOM.Standard'); 
+
+        "CheckBaseline" = $false;
+        "Runtime" = "365";
+        "Configuration" = "Debug45";
+
+        #"BuildParams" = ("/p:spRuntime=365 /p:Configuration=Debug45 /p:DefineConstants=NET45 " + $defaultBuildParams);
+        "BuildParams" = ("/p:DefineConstants=NET45 " + $defaultBuildParams);
+    }
 }
 
 $buildProfiles += @{
@@ -276,6 +289,9 @@ $buildProfiles += @{
         #"BuildParams" = (" /p:Configuration=Debug /p:DefineConstants=NET45 " + $defaultBuildParams);
         "BuildParams" = (" /p:DefineConstants=NET45 " + $defaultBuildParams);
 }
+
+
+
 
 foreach($buildProfile in $buildProfiles) {
 

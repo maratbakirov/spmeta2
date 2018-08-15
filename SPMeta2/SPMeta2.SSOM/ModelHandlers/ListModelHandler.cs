@@ -12,6 +12,7 @@ using SPMeta2.SSOM.DefaultSyntax;
 using SPMeta2.SSOM.ModelHandlers.Base;
 using SPMeta2.SSOM.ModelHosts;
 using SPMeta2.Utils;
+using SPMeta2.ModelHosts;
 
 namespace SPMeta2.SSOM.ModelHandlers
 {
@@ -167,6 +168,12 @@ namespace SPMeta2.SSOM.ModelHandlers
             if (definition.NavigateForFormsPages.HasValue)
                 list.NavigateForFormsPages = definition.NavigateForFormsPages.Value;
 
+            if (definition.EnableAssignToEmail.HasValue)
+                list.EnableAssignToEmail = definition.EnableAssignToEmail.Value;
+
+            if (definition.DisableGridEditing.HasValue)
+                list.DisableGridEditing = definition.DisableGridEditing.Value;
+
 #if !NET35
             if (definition.IndexedRootFolderPropertyKeys.Any())
             {
@@ -194,6 +201,9 @@ namespace SPMeta2.SSOM.ModelHandlers
 
             if (definition.WriteSecurity.HasValue)
                 list.WriteSecurity = definition.WriteSecurity.Value;
+
+            if (definition.ReadSecurity.HasValue)
+                list.ReadSecurity = definition.ReadSecurity.Value;
 
             var docLibrary = list as SPDocumentLibrary;
 
@@ -311,10 +321,10 @@ namespace SPMeta2.SSOM.ModelHandlers
                 var list = hostList ?? web.GetList(SPUtility.ConcatUrls(web.ServerRelativeUrl, listDefinition.GetListUrl()));
 #pragma warning restore 618
 
-                var listModelHost = new ListModelHost
+                var listModelHost = ModelHostBase.Inherit<ListModelHost>(modelHost as ModelHostBase, host =>
                 {
-                    HostList = list
-                };
+                    host.HostList = list;
+                });
 
                 if (childModelType == typeof(ModuleFileDefinition))
                 {

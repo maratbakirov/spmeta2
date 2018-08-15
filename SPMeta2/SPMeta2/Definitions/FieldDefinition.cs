@@ -282,6 +282,10 @@ namespace SPMeta2.Definitions
         public bool? EnforceUniqueValues { get; set; }
 
         [ExpectValidation]
+        [DataMember]
+        public bool? PushChangesToLists { get; set; }
+
+        [ExpectValidation]
         [ExpectUpdate]
         [DataMember]
         public virtual bool Indexed { get; set; }
@@ -296,13 +300,24 @@ namespace SPMeta2.Definitions
         [DataMember]
         public virtual string ValidationMessage { get; set; }
 
+        /// <summary>
+        /// Gets or sets a Boolean value that specifies whether values in the field can be modified.
+        /// Corresponds to SPField.ReadOnlyField property
+        /// </summary>
+        [ExpectValidation]
+        [ExpectUpdate]
+        [DataMember]
+
+        public bool? ReadOnlyField { get; set; }
+
+
         #endregion
 
         #region methods
 
         public override string ToString()
         {
-            return new ToStringResult<FieldDefinition>(this, base.ToString())
+            return new ToStringResult<FieldDefinition>(this)
                          .AddPropertyValue(p => p.InternalName)
                          .AddPropertyValue(p => p.Id)
                          .AddPropertyValue(p => p.Title)

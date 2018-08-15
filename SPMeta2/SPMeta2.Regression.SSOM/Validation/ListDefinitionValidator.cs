@@ -47,13 +47,31 @@ namespace SPMeta2.Regression.SSOM.Validation
                     assert.SkipProperty(m => m.Description);
             });
 
+            if (definition.EnableAssignToEmail.HasValue)
+            {
+                assert.ShouldBeEqual(m => m.EnableAssignToEmail, o => o.EnableAssignToEmail);
+            }
+            else
+            {
+                assert.SkipProperty(m => m.EnableAssignToEmail, "EnableAssignToEmail is null or empty");
+            }
+
+            if (definition.DisableGridEditing.HasValue)
+            {
+                assert.ShouldBeEqual(m => m.DisableGridEditing, o => o.DisableGridEditing);
+            }
+            else
+            {
+                assert.SkipProperty(m => m.DisableGridEditing, "DisableGridEditing is null or empty");
+            }
+
             if (definition.NavigateForFormsPages.HasValue)
             {
                 assert.ShouldBeEqual(m => m.NavigateForFormsPages, o => o.NavigateForFormsPages);
             }
             else
             {
-                assert.SkipProperty(m => m.NavigateForFormsPages, "NavigateForFormsPages  is null or empty");
+                assert.SkipProperty(m => m.NavigateForFormsPages, "NavigateForFormsPages is null or empty");
             }
 
             if (definition.WriteSecurity.HasValue)
@@ -249,8 +267,11 @@ namespace SPMeta2.Regression.SSOM.Validation
                     if (!dstUrl.StartsWith("/"))
                         dstUrl = "/" + dstUrl;
 
-                    if (!srcUrl.StartsWith("/"))
+                    if (!srcUrl.StartsWith("/")
+                        && !srcUrl.StartsWith("~"))
+                    {
                         srcUrl = "/" + srcUrl;
+                    }
 
                     srcUrl = srcUrl.ToLower();
                     dstUrl = dstUrl.ToLower();
@@ -265,7 +286,8 @@ namespace SPMeta2.Regression.SSOM.Validation
 
                         isValid = srcUrl
                             .Replace("~sitecollection", siteCollectionUrl)
-                            .Replace("//", "/") == dstUrl;
+                            .Replace("//", "/")
+                            .EndsWith(dstUrl);
                     }
                     else if (s.DocumentTemplateUrl.Contains("~site"))
                     {
@@ -273,11 +295,17 @@ namespace SPMeta2.Regression.SSOM.Validation
 
                         isValid = srcUrl
                             .Replace("~site", siteCollectionUrl)
-                            .Replace("//", "/") == dstUrl;
+                            .Replace("//", "/")
+                            .EndsWith(dstUrl);
                     }
                     else
                     {
                         isValid = dstUrl.EndsWith(srcUrl);
+                    }
+
+                    if (isValid == false)
+                    {
+
                     }
 
                     return new PropertyValidationResult

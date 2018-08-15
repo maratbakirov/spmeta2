@@ -7,6 +7,7 @@ namespace SPMeta2.Utils
 {
     public class ToStringResult<TType>
     {
+        #region constructors
         public ToStringResult(TType obj)
             : this(obj, string.Empty)
         {
@@ -21,12 +22,33 @@ namespace SPMeta2.Utils
             InitialString = initialString;
         }
 
+        #endregion
+
+        #region static
+
         public static ToStringResult<TType> New(TType obj)
         {
             return new ToStringResult<TType>(obj);
         }
 
+        #endregion
+
+        #region properties
+
+        public string InitialString { get; set; }
+        public TType SrcObject { get; set; }
+        public Dictionary<string, string> Values { get; set; }
+
+        #endregion
+
+        #region methods
+
         public override string ToString()
+        {
+            return ToString(" ");
+        }
+
+        public string ToString(string joinSeparator)
         {
             var result = new List<string>();
 
@@ -34,14 +56,10 @@ namespace SPMeta2.Utils
                 result.Add(string.Format("{0}:[{1}]", key, Values[key]));
 
             if (!string.IsNullOrEmpty(InitialString))
-                return InitialString + " " + string.Join(" ", result.ToArray());
+                return InitialString + joinSeparator + string.Join(joinSeparator, result.ToArray());
 
-            return string.Join(" ", result.ToArray());
+            return string.Join(joinSeparator, result.ToArray());
         }
-
-        public string InitialString { get; set; }
-        public TType SrcObject { get; set; }
-        public Dictionary<string, string> Values { get; set; }
 
         public ToStringResult<TType> AddPropertyValue(Expression<Func<TType, object>> exp)
         {
@@ -78,5 +96,7 @@ namespace SPMeta2.Utils
 
             return this;
         }
+
+        #endregion
     }
 }

@@ -248,6 +248,9 @@ namespace SPMeta2.CSOM.ModelHandlers
                                             .SetTitle(definition.Title)
                                             .SetID(definition.Id);
 
+            if (!string.IsNullOrEmpty(definition.AuthorizationFilter))
+                xml.SetAuthorizationFilter(definition.AuthorizationFilter);
+
             if (definition.Width.HasValue)
                 xml.SetWidth(definition.Width.Value);
 
@@ -299,12 +302,14 @@ namespace SPMeta2.CSOM.ModelHandlers
             if (!string.IsNullOrEmpty(definition.ExportMode))
                 xml.SetExportMode(definition.ExportMode);
 
+            if (definition.Hidden.HasValue)
+                xml.SetHidden(definition.Hidden.Value);
+
             // bindings
             ProcessParameterBindings(definition, xml);
 
             // properties
             ProcessWebpartProperties(definition, xml);
-
 
             return xml.ToString();
         }
@@ -396,6 +401,12 @@ namespace SPMeta2.CSOM.ModelHandlers
                        &&
                        listItemModelHost.HostFolder.Properties.FieldValues["vti_winfileattribs"].ToString() ==
                        "00000012"));
+
+                // is parent /forms folder or nay other special page?
+                if (doesFileHasListItem)
+                {
+                    doesFileHasListItem = !listItemModelHost.IsSpecialFolderContext;
+                }
 
 #endif
 

@@ -53,6 +53,8 @@ namespace SPMeta2.Definitions
 
             InlineEdit = null;
             TabularView = null;
+
+            Types = new Collection<string>();
         }
 
         #endregion
@@ -157,6 +159,20 @@ namespace SPMeta2.Definitions
         [ExpectValidation]
         [ExpectUpdate]
         [DataMember]
+        public bool? MobileDefaultView { get; set; }
+        
+
+        /// <summary>
+        /// Gets or sets whether the list view should include parent folder item.
+        /// </summary>
+        [ExpectValidation]
+        [ExpectUpdate]
+        [DataMember]
+        public bool? IncludeRootFolder { get; set; }
+
+        [ExpectValidation]
+        [ExpectUpdate]
+        [DataMember]
         public bool Hidden { get; set; }
 
         /// <summary>
@@ -205,6 +221,16 @@ namespace SPMeta2.Definitions
         [ExpectRequired]
         [DataMember]
         public string Type { get; set; }
+
+        /// <summary>
+        /// If set, used insted of .Type property.
+        /// Allows to define multiple types of view, such as 'ViewType.Calendar | ViewType.Recurrence'
+        /// </summary>
+        [ExpectValidation]
+        //[ExpectRequired]
+        [DataMember]
+
+        public Collection<string> Types { get; set; }
 
         /// <summary>
         /// Gets or sets field references for one or more aggregate, or total, columns used in a view.

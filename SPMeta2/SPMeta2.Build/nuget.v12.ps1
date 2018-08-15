@@ -37,11 +37,11 @@ $g_useDayVersion = $false
 $g_is13 = $false
 
 # M2 NuGet package version, release noted URL and target solution directory
-$g_hardcoreVersionBase = "1.2.75";
+$g_hardcoreVersionBase = "1.2.105";
 $g_hardcoreVersion = "$g_hardcoreVersionBase-beta1";
 
-$g_releaseNotes = "https://github.com/SubPointSolutions/spmeta2/releases/tag/1.2.60";
-$g_solutionDirectory = "C:\Users\$env:USERNAME.$env:USERDOMAIN\Source\Repos\spmeta2\spmeta2"
+$g_releaseNotes = "https://github.com/SubPointSolutions/spmeta2/releases/tag/$g_hardcoreVersion";
+$g_solutionDirectory = [System.IO.Path]::GetFullPath("$currentDir\..\..\SPMeta2")
 
 $g_Verbosity = 'quiet'
 
@@ -75,7 +75,7 @@ else
 	
 	$date = get-date
 	$stamp = ( $date.ToString("yy") + $date.DayOfYear.ToString("000") + $date.ToString("HHmm"))
-	$g_hardcoreVersion = $g_hardcoreVersionBase + "-alpha" + $stamp
+	#$g_hardcoreVersion = $g_hardcoreVersionBase + "-alpha" + $stamp
 
 	#$g_solutionDirectory = "c:\prj\m2\SPMeta2"
 }

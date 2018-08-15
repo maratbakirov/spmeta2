@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
+using System.Reflection;
 using Microsoft.Office.SecureStoreService.Server;
 using Microsoft.Office.Server.Audience;
 using Microsoft.Office.Server.Search.Portability;
@@ -31,6 +32,7 @@ using SPMeta2.Services.Impl.Validation;
 using SPMeta2.SSOM.Standard.Services;
 using SPMeta2.ModelHosts;
 using SPMeta2.Exceptions;
+using SPMeta2.Services;
 
 namespace SPMeta2.Containers.SSOM
 {
@@ -79,7 +81,7 @@ namespace SPMeta2.Containers.SSOM
 
             _provisionService.OnModelNodeProcessing += (sender, args) =>
             {
-                Trace.WriteLine(
+                ContainerTraceUtils.WriteLine(
                     string.Format("Processing: [{0}/{1}] - [{2:0} %] - [{3}] [{4}]",
                     new object[] {
                                   args.ProcessedModelNodeCount,
@@ -92,7 +94,7 @@ namespace SPMeta2.Containers.SSOM
 
             _provisionService.OnModelNodeProcessed += (sender, args) =>
             {
-                Trace.WriteLine(
+                ContainerTraceUtils.WriteLine(
                    string.Format("Processed: [{0}/{1}] - [{2:0} %] - [{3}] [{4}]",
                    new object[] {
                                   args.ProcessedModelNodeCount,
@@ -102,6 +104,17 @@ namespace SPMeta2.Containers.SSOM
                                   args.CurrentNode.Value
                                   }));
             };
+
+            foreach (var modelHandler in _provisionService.ModelHandlers.Values)
+            {
+                var isQA = modelHandler.GetType()
+                    .GetProperty("IsQARun", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                if (isQA != null)
+                {
+                    isQA.SetValue(modelHandler, true); ;
+                }
+            }
         }
 
         private void LoadEnvironmentConfig()
@@ -119,6 +132,11 @@ namespace SPMeta2.Containers.SSOM
         #endregion
 
         #region properties
+
+        public override ProvisionServiceBase ProvisionService
+        {
+            get { return _provisionService; }
+        }
 
         public List<string> WebApplicationUrls { get; set; }
         public List<string> SiteUrls { get; set; }
@@ -171,7 +189,7 @@ namespace SPMeta2.Containers.SSOM
 
             foreach (var webAppUrl in WebApplicationUrls)
             {
-                Trace.WriteLine(string.Format("[INF]    Running on web app: [{0}]", webAppUrl));
+                ContainerTraceUtils.WriteLine(string.Format("[INF]    Running on web app: [{0}]", webAppUrl));
 
                 for (var provisionGeneration = 0; provisionGeneration < ProvisionGenerationCount; provisionGeneration++)
                 {
@@ -329,7 +347,7 @@ namespace SPMeta2.Containers.SSOM
             {
                 //var siteUrl = GetTargetSiteCollectionUrl();
 
-                Trace.WriteLine(string.Format("[INF]    Running on site: [{0}]", siteUrl));
+                ContainerTraceUtils.WriteLine(string.Format("[INF]    Running on site: [{0}]", siteUrl));
 
                 for (var provisionGeneration = 0; provisionGeneration < ProvisionGenerationCount; provisionGeneration++)
                 {
@@ -355,7 +373,7 @@ namespace SPMeta2.Containers.SSOM
                 //var webUrl = GetTargetSiteCollectionUrl();
 
 
-                Trace.WriteLine(string.Format("[INF]    Running on web: [{0}]", webUrl));
+                ContainerTraceUtils.WriteLine(string.Format("[INF]    Running on web: [{0}]", webUrl));
 
                 for (var provisionGeneration = 0; provisionGeneration < ProvisionGenerationCount; provisionGeneration++)
                 {
@@ -377,7 +395,7 @@ namespace SPMeta2.Containers.SSOM
         {
             foreach (var webUrl in WebUrls)
             {
-                Trace.WriteLine(string.Format("[INF]    Running on web: [{0}]", webUrl));
+                ContainerTraceUtils.WriteLine(string.Format("[INF]    Running on web: [{0}]", webUrl));
 
                 for (var provisionGeneration = 0; provisionGeneration < ProvisionGenerationCount; provisionGeneration++)
                 {
@@ -428,6 +446,13 @@ namespace SPMeta2.Containers.SSOM
             var farm = SPFarm.Local;
 
             action(farm);
+        }
+
+        public void WithSSOMSiteAndWebContext(Action<SPSite, SPWeb> action)
+        {
+            var siteUrl = this.SiteUrls.First();
+
+            WithSSOMSiteAndWebContext(siteUrl, action);
         }
 
         public void WithSSOMSiteAndWebContext(string siteUrl, Action<SPSite, SPWeb> action)

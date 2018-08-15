@@ -101,12 +101,17 @@
   <ItemGroup>
     <Compile Include="BuiltInDefinitions\BuiltInPublishingFieldDefinitions.cs" />
     <Compile Include="BuiltInDefinitions\BuiltInPublishingPages.cs" />
+    <Compile Include="Definitions\DesignPackageDefinition.cs" />
+    <Compile Include="Definitions\ProfileTypePropertyDefinition.cs" />
+    <Compile Include="Definitions\CorePropertyDefinition.cs" />
+    <Compile Include="Definitions\DocumentSetDefinition.cs" />
     <Compile Include="Definitions\Base\ReusableItemDefinitionBase.cs" />
     <Compile Include="Definitions\DisplayTemplates\FilterDisplayTemplateDefinition.cs" />
     <Compile Include="Definitions\ManagedPropertyDefinition.cs" />
     <Compile Include="Definitions\MetadataNavigationSettingsDefinition.cs" />
     <Compile Include="Definitions\ReusableHTMLItemDefinition.cs" />
     <Compile Include="Definitions\ReusableTextItemDefinition.cs" />
+    <Compile Include="Definitions\Webparts\AdvancedSearchBoxDefinition.cs" />
     <Compile Include="Definitions\Webparts\CategoryWebPartDefinition.cs" />
     <Compile Include="Definitions\Webparts\CommunityAdminWebPartDefinition.cs" />
     <Compile Include="Definitions\Webparts\CommunityJoinWebPartDefinition.cs" />
@@ -126,10 +131,16 @@
     <Compile Include="Enumerations\BuiltInContentClass.cs" />
     <Compile Include="Enumerations\BuiltInCompatibleSearchDataTypes.cs" />
     <Compile Include="Enumerations\BuiltInManagedDataType.cs" />
+    <Compile Include="Enumerations\BuiltInPropertyDataType.cs" />
     <Compile Include="Services\Impl\Validation\DefaultPublishingPageDefinitionValidationService.cs" />
     <Compile Include="Services\ServiceModelHandlers\PublishingPageDefinitionValidationModelHandler.cs" />
+    <Compile Include="Syntax\DesignPackageDefinitionSyntax.cs" />
+    <Compile Include="Syntax\ProfileTypePropertySyntax.cs" />
+    <Compile Include="Syntax\CorePropertyDefinitionSyntax.cs" />
+    <Compile Include="Syntax\DocumentSetDefinitionSyntax.cs" />
     <Compile Include="Syntax\MetadataNavigationSettingsSyntax.cs" />
     <Compile Include="Syntax\ReusableTextItemDefinitionSyntax.cs" />
+    <Compile Include="Syntax\Webparts\AdvancedSearchBoxDefinitionSyntax.cs" />
     <Compile Include="Syntax\Webparts\CategoryWebPartDefinitionSyntax.cs" />
     <Compile Include="Syntax\Webparts\CommunityAdminWebPartDefinitionSyntax.cs" />
     <Compile Include="Syntax\Webparts\CommunityJoinWebPartDefinitionSyntax.cs" />
@@ -240,6 +251,11 @@
     <Folder Include="Syntax\Interfaces\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties BuildVersion_StartDate="2000/1/1" />
+    </VisualStudio>
+  </ProjectExtensions>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

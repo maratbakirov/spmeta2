@@ -53,6 +53,22 @@ namespace SPMeta2.CSOM.ModelHandlers
 
                 DeployContentTypeWorkflowAssociationDefinition(modelHost, contentType, workflowAssociationModel);
             }
+            else if (modelHost is ContentTypeLinkModelHost)
+            {
+                var contentTypeLinkModelHost = (modelHost as ContentTypeLinkModelHost);
+
+                // don't update content type link within list
+                if (contentTypeLinkModelHost.HostList != null)
+                    contentTypeLinkModelHost.ShouldUpdateHost = false;
+
+                var contentType = contentTypeLinkModelHost.HostContentType;
+                var web = contentTypeLinkModelHost.HostWeb;
+
+                if (contentTypeLinkModelHost.HostList != null)
+                    contentTypeLinkModelHost.ShouldUpdateHost = false;
+
+                DeployContentTypeWorkflowAssociationDefinition(modelHost, contentType, workflowAssociationModel);
+            }
             else
             {
                 throw new SPMeta2NotSupportedException("model host should be of type ListModelHost or WebModelHost");
@@ -75,6 +91,14 @@ namespace SPMeta2.CSOM.ModelHandlers
             if (modelHost is ModelHostContext)
             {
                 return (modelHost as ModelHostContext).Web;
+            }
+
+            if (modelHost is ContentTypeLinkModelHost)
+            {
+                var listContentTypeHost = (modelHost as ContentTypeLinkModelHost);
+
+
+                return listContentTypeHost.HostWeb;
             }
 
             throw new SPMeta2NotSupportedException("model host should be of type ListModelHost or WebModelHost");
@@ -116,6 +140,19 @@ namespace SPMeta2.CSOM.ModelHandlers
                 var defName = def.Name;
 
                 var res = context.LoadQuery(contentType.WorkflowAssociations.Where(w => w.Name == defName));
+                context.ExecuteQueryWithTrace();
+
+                return res.FirstOrDefault();
+            }
+
+            if (modelHost is ContentTypeLinkModelHost)
+            {
+                var list = (modelHost as ContentTypeLinkModelHost).HostList;
+                var context = list.Context;
+
+                var defName = def.Name;
+
+                var res = context.LoadQuery(list.WorkflowAssociations.Where(w => w.Name == defName));
                 context.ExecuteQueryWithTrace();
 
                 return res.FirstOrDefault();
@@ -193,7 +230,11 @@ namespace SPMeta2.CSOM.ModelHandlers
                     ModelHost = modelHost
                 });
 
-                contentType.Update(true);
+                if (!contentType.ReadOnly)
+                {
+                    contentType.Update(true);
+                }
+
                 context.ExecuteQueryWithTrace();
             }
             else
@@ -219,7 +260,11 @@ namespace SPMeta2.CSOM.ModelHandlers
 
                 //existingWorkflowAssotiation.Update();
 
-                contentType.Update(true);
+                if (!contentType.ReadOnly)
+                {
+                    contentType.Update(true);
+                }
+
                 context.ExecuteQueryWithTrace();
             }
         }
